@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Room</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        body {
+            overflow-y: auto; /* vertical scrollbar if needed */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+
+            background: linear-gradient(135deg, #4d6378, #283949, #182c3f, #051423);
+            background-size: 400% 400%;
+            animation: randomGradient 20s ease-in-out infinite;
+
+            position: relative;
+            overflow-y: scroll; /* always show vertical scrollbar */
+
+            /* Fade in body */
+            opacity: 0;
+            animation: fadeIn 2s ease-in forwards, randomGradient 20s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* Container for stars only at bottom */
+        #stars-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40vh; /* only lower 40% of the screen */
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* Star shape */
+        .star {
+            position: absolute;
+            background: white;
+            opacity: 0.3;
+            clip-path: polygon(
+                50% 0%, 61% 35%, 98% 35%, 
+                68% 57%, 79% 91%, 50% 70%, 
+                21% 91%, 32% 57%, 2% 35%, 
+                39% 35%
+            );
+            animation: twinkle 3s infinite alternate ease-in-out;
+        }
+
+        @keyframes twinkle {
+            from { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+            to { opacity: 0.7; transform: scale(1.3) rotate(15deg); }
+        }
+
+        @keyframes randomGradient {
+            0% { background-position: 20% 30%; }
+            20% { background-position: 80% 40%; }
+            40% { background-position: 60% 80%; }
+            60% { background-position: 30% 20%; }
+            80% { background-position: 90% 70%; }
+            100% { background-position: 20% 30%; }
+        }
+
+
+        /* Header */
+        .header {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            position: relative;   /* enables top/left adjustment */
+            top: -0px; 
+        }
+
+        .header .logo {
+            font-size: 40px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #ffffff; /* cursor effect */
+            width: 0; /* start hidden */
+            display: inline-block;
+            position: relative;
+            margin-left: 20px;
+
+            /* typing effect */
+            animation: typing 4s steps(12, end) forwards,
+                       blink 0.6s step-end infinite;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 12ch; } /* "AI-ducation" */
+        }
+
+        @keyframes blink {
+            70% { border-color: transparent; }
+        }
+
+        .header .logo::after {
+            content: "📖";
+            color: #ffffff;
+            font-size: 1.1em;
+            opacity: 0;
+            margin-left: 1px;
+            display: inline-block;
+            animation: bookAppear 1s ease forwards;
+            animation-delay: 4s;
+            transform: translateY(-4px);
+        }
+
+        @keyframes bookAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-4px) scale(1);
+            }
+        }
+
+        /* Burger menu styles */
+        .burger-menu {
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 1px; /* rounded corners */
+            transition: background 0.3s ease;
+        }
+        .burger-menu:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .burger-menu .bar {
+            width: 50px;
+            height: 5px;
+            background-color: #ffffff;
+            margin: 4px 0;
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+
+        /* Dropdown menu */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 13px;
+            top: 140px;
+            background: rgba(255, 255, 255, 0.1);
+            min-width: 300px;
+            box-shadow: 0px 8px 16px rgba(0,0,0,0.25);
+            z-index: 1;
+            border-radius: 10px;
+            backdrop-filter: blur(4px); /* soft blur effect */
+        }
+        .dropdown-menu a {
+            color: #ffffff;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+        .dropdown-menu a:hover {
+            background-color: rgba(40, 57, 73, 0.9);
+        }
+        .show {
+            display: block;
+        }
+
+        /* Room */
+        .room-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 950px;
+            margin: auto;
+        }
+
+        h2 { margin-bottom: 20px; }
+        ul { list-style: none; padding: 0; }
+        li { background: rgba(0,0,0,0.2); margin: 8px 0; padding: 10px; border-radius: 8px;}
+        .question-block { background: rgba(255,255,255,0.08); margin: 18px 0; padding: 15px; border-radius: 10px; text-align: left;}
+        .question-title { font-weight: 600; margin-bottom: 8px;}
+        .choices { margin-left: 20px; }
+        .answer { color: #00e676; font-weight: 600; }
+        .score-table { margin: 20px auto; border-collapse: collapse; width: 80%; }
+        .score-table th, .score-table td { padding: 8px 12px; border: 1px solid #fff; }
+        .score-table th { background: #008080; }
+        .score-table td { background: rgba(255,255,255,0.08); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">AI-ducation</div>
+        <div class="burger-menu" onclick="toggleMenu()">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        <div class="dropdown-menu" id="dropdown">
+            <a href="#">Home</a>
+            <a href="#">Settings</a>
+            <a href="#">Contact</a>
+            <a href="#">Logout</a>
+        </div>
+    </div>
+
+    <div class="room-container">
+        <div id="timer" style="font-size: 24px; color: #fff; margin-bottom: 20px;">
+            Time Remaining: <span id="time-remaining">--:--</span>
+        </div>
+        <h2>Group Room: <span style="color:#00e676;">{{ group_id }}</span></h2>
+        <p><strong>Host:</strong> {{ host }}</p>
+        <h3>Users in this room:</h3>
+        <ul>
+            {% for user in users %}
+                {% if user != host %}
+                    <li>{{ user }}</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+
+        {% if username == host %}
+        <form method="POST" action="{{ url_for('end_group_exam') }}">
+            <input type="hidden" name="group_id" value="{{ group_id }}">
+            <button type="submit" style="margin: 20px 0; padding: 12px 28px; font-size: 18px; border-radius: 12px; border: none; background-color: #e74c3c; color: white; cursor: pointer;">
+                End Group Exam
+            </button>
+        </form>
+        {% endif %}
+
+        <h3>Generated Questions</h3>
+        {% for q in questions %}
+            <div class="question-block">
+                <div class="question-title">Q{{ loop.index }}: {{ q.question }}</div>
+                <div class="choices">
+                    {% for choice in q.choices %}
+                        <div>{{ choice }}</div>
+                    {% endfor %}
+                </div>
+                <div class="answer">Correct Answer: {{ q.correct_answer }}</div>
+            </div>
+        {% endfor %}
+
+        <h3>User Scores</h3>
+        <table class="score-table">
+            <tr>
+                <th>User</th>
+                <th>Score</th>
+            </tr>
+            {% for user in users %}
+                {% if user != host %}
+                <tr>
+                    <td>{{ user }}</td>
+                    <td>{{ scores.get(user, 'Not finished') }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+
+        {% if username == host %}
+            <button id="addTimeBtn" style="display:none; margin: 10px 0; padding: 10px 24px; font-size: 16px; border-radius: 8px; border: none; background-color: #3b82f6; color: white; cursor: pointer;">
+                Add 5 Minutes
+            </button>
+        {% endif %}
+    </div>
+
+    <div id="stars-container"></div>
+
+    <script>
+    const container = document.getElementById("stars-container");
+
+    for (let i = 0; i < 40; i++) {
+        const star = document.createElement("div");
+        star.classList.add("star");
+
+        // random position but only inside the lower container
+        star.style.top = Math.random() * 100 + "%";
+        star.style.left = Math.random() * 100 + "%";
+
+        // random size (8px–15px)
+        const size = Math.random() * 7 + 8;
+        star.style.width = size + "px";
+        star.style.height = size + "px";
+
+        // random twinkle timing
+        star.style.animationDuration = (2 + Math.random() * 3) + "s";
+        star.style.animationDelay = Math.random() * 5 + "s";
+
+        container.appendChild(star);
+    }
+    </script>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById("dropdown").classList.toggle("show");
+        }
+    </script>
+    <script>
+var timed = "{{ timed }}";
+var initialRemainingTime = {{ remaining_time|default(time_limit * 60)|int }};
+var remainingTime = initialRemainingTime;
+var isHost = "{{ username }}" === "{{ host }}";
+
+if (timed === "yes" && remainingTime > 0) {
+    document.getElementById('timer').style.display = 'block';
+    var timerElement = document.getElementById('time-remaining');
+    function updateTimer() {
+        var minutes = Math.floor(remainingTime / 60);
+        var seconds = remainingTime % 60;
+        timerElement.textContent = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+        remainingTime--;
+        if (remainingTime < 0) {
+            clearInterval(timerInterval);
+            timerElement.textContent = "00:00";
+            // Show add time button for host
+            if (isHost) {
+                document.getElementById('addTimeBtn').style.display = 'inline-block';
+            }
+        }
+    }
+    updateTimer();
+    var timerInterval = setInterval(updateTimer, 1000);
+
+    // Add 5 minutes button logic (host only)
+    if (isHost) {
+        document.getElementById('addTimeBtn').onclick = function() {
+            fetch("{{ url_for('add_group_exam_time') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token() if csrf_token is defined else '' }}"
+                },
+                body: JSON.stringify({ group_id: "{{ group_id }}", minutes: 5 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    remainingTime = data.remaining_time;
+                    document.getElementById('addTimeBtn').style.display = 'none';
+                    updateTimer();
+                    timerInterval = setInterval(updateTimer, 1000);
+                }
+            });
+        };
+    }
+} else {
+    document.getElementById('timer').style.display = 'none';
+}
+</script>
+</body>
+</html>

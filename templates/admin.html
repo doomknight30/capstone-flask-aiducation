@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        color: #ffffff;
+        text-align: center;
+        padding: 20px;
+
+        background: linear-gradient(135deg, #4d6378, #283949, #182c3f, #051423);
+        background-size: 400% 400%;
+        animation: randomGradient 20s ease-in-out infinite;
+
+        position: relative;
+        overflow-y: scroll; /* always show vertical scrollbar */
+
+        /* Fade in body */
+        opacity: 0;
+        animation: fadeIn 2s ease-in forwards, randomGradient 20s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+        to { opacity: 1; }
+        }
+
+        /* Container for stars only at bottom */
+        #stars-container {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 40vh; /* only lower 40% of the screen */
+        overflow: hidden;
+        pointer-events: none;
+        }
+
+        /* Star shape */
+        .star {
+        position: absolute;
+        background: white;
+        opacity: 0.3;
+        clip-path: polygon(
+            50% 0%, 61% 35%, 98% 35%, 
+            68% 57%, 79% 91%, 50% 70%, 
+            21% 91%, 32% 57%, 2% 35%, 
+            39% 35%
+        );
+        animation: twinkle 3s infinite alternate ease-in-out;
+        }
+
+        @keyframes twinkle {
+        from { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+        to { opacity: 0.7; transform: scale(1.3) rotate(15deg); }
+        }
+
+        @keyframes randomGradient {
+        0% { background-position: 20% 30%; }
+        20% { background-position: 80% 40%; }
+        40% { background-position: 60% 80%; }
+        60% { background-position: 30% 20%; }
+        80% { background-position: 90% 70%; }
+        100% { background-position: 20% 30%; }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 230px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            position: fixed;
+            height: 73.3%;              /* slightly shorter so it doesn't touch top/bottom */
+            top: 6%;                  /* push down */
+            left: 20px;               /* move a bit to the right */
+            border-radius: 15px;      /* rounded edges */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* optional for depth */
+        }
+        .sidebar h2 { text-align: center; margin-bottom: 20px; }
+        .sidebar ul { list-style: none; }
+        .sidebar ul li { margin: 15px 0; }
+        .sidebar ul li a {
+        text-decoration: none;
+        color: #fff;
+        font-size: 18px;
+        display: block;
+        padding: 10px;
+        border-radius: 8px;
+        transition: background 0.3s ease;
+        }
+        .sidebar ul li a:hover {
+        background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-content {
+        margin-left: 250px;
+        padding: 25px;
+        width: calc(100% - 250px);
+        }
+        /* Header */
+        .header {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .header .logo {
+            font-size: 40px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #ffffff; /* cursor effect */
+            width: 0; /* start hidden */
+            display: inline-block;
+            position: relative;
+            margin-left: 20px; /* pushes it to the right */
+
+            /* typing effect */
+            animation: typing 4s steps(12, end) forwards,
+                    blink 0.6s step-end infinite;
+        }
+
+        /* typing animation */
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 12ch; } /* "AI-ducation" = 12 characters */
+        }
+
+        /* blinking cursor */
+        @keyframes blink {
+            70% { border-color: transparent; }
+        }
+
+        .header .logo::after {
+            content: "📖"; /* open book */
+            color: #ffffff; /* white */
+            font-size: 1.1em; /* bigger than before */
+            opacity: 0;
+            margin-left: 1px; /* a little more spacing */
+            display: inline-block;
+            animation: bookAppear 1s ease forwards;
+            animation-delay: 4s; /* after typing */
+            transform: translateY(-4px); /* shift upward */
+        }
+
+        /* book fade & slide in */
+        @keyframes bookAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-4px) scale(1); /* keep upward shift */
+            }
+        }
+        .dashboard-section, .content-section, .settings-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        /* Enhanced textbox styles */
+        input[type="text"],
+        input[type="password"],
+        input[type="email"],
+        input[type="date"],
+        input[type="number"] {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px 15px;
+            margin: 8px 0 15px 0;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 16px;
+            box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.3);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        input[type="text"]::placeholder,
+        input[type="password"]::placeholder,
+        input[type="email"]::placeholder,
+        input[type="date"]::placeholder,
+        input[type="number"]::placeholder {
+            color: #ddd;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="email"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 8px 2px #00bfa5;
+            outline: none;
+            color: #fff;
+        }
+        /* Enhanced table styles */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        table thead tr {
+            background: #009688;
+            color: #fff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        table thead th {
+            padding: 12px 15px;
+            border: none;
+        }
+        table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            transition: background 0.3s ease;
+        }
+        table tbody tr:hover {
+            background: rgba(0, 191, 165, 0.2);
+        }
+        table tbody td {
+            padding: 12px 15px;
+            border: none;
+            color: #eee;
+        }
+        table tbody tr:last-child {
+            border-bottom: none;
+        }
+        /* Enhanced button styles */
+        button {
+            background-color: #009688;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 150, 136, 0.4);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+        }
+        button:hover {
+            background-color: #00bfa5;
+            box-shadow: 0 6px 12px rgba(0, 191, 165, 0.6);
+            transform: translateY(-2px);
+        }
+        button:active {
+            background-color: #00796b;
+            box-shadow: 0 2px 4px rgba(0, 121, 107, 0.6);
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <ul>
+            <li><a href="#" onclick="showSection('dashboard')">Dashboard</a></li>
+            <li><a href="#" onclick="showSection('userList')">Manage Users</a></li>
+            <li><a href="#" onclick="showSection('manageContent')">Manage Content</a></li>
+            <li><a href="#" onclick="showSection('settings')">Settings</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </div>
+
+<div id="stars-container"></div>
+
+    <script>
+    const container = document.getElementById("stars-container");
+
+    for (let i = 0; i < 40; i++) {
+        const star = document.createElement("div");
+        star.classList.add("star");
+
+        // random position but only inside the lower container
+        star.style.top = Math.random() * 100 + "%";
+        star.style.left = Math.random() * 100 + "%";
+
+        // random size (8px–15px)
+        const size = Math.random() * 7 + 8;
+        star.style.width = size + "px";
+        star.style.height = size + "px";
+
+        // random twinkle timing
+        star.style.animationDuration = (2 + Math.random() * 3) + "s";
+        star.style.animationDelay = Math.random() * 5 + "s";
+
+        container.appendChild(star);
+    }
+    </script>
+
+    <div class="main-content">
+        <div class="header">AI-ducation Admin</div>
+        <div class="dashboard-section" id="dashboard" style="display: block;">
+            <h2>Welcome, Admin</h2>
+            <p>Manage users, content, and settings from here.</p>
+        </div>
+        <div class="user-list" id="userList">
+            <h2>Manage Users</h2>
+        
+            <h3>Add User</h3>
+            <input type="text" id="newUsername" placeholder="Username">
+            <input type="password" id="newPassword" placeholder="Password">
+            <input type="text" id="newRole" placeholder="Role (admin/user)">
+            <input type="email" id="newEmail" placeholder="Email">
+            <input type="date" id="newBirthdate">
+            <button onclick="addUser()">Add User</button>
+        
+            <h3>User List</h3>
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>Birthdate (YYY-MM-DD)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <div class="content-section" id="manageContent">
+            <h2>Manage Questions</h2>
+        
+            <h3>Add Question</h3>
+            <input type="text" id="newQuestion" placeholder="Enter question">
+            <input type="text" id="newCorrectAnswer" placeholder="Correct answer">
+            <input type="text" id="newOption1" placeholder="Option 1">
+            <input type="text" id="newOption2" placeholder="Option 2">
+            <input type="text" id="newOption3" placeholder="Option 3">
+            <button onclick="addQuestion()">Add Question</button>
+        
+            <h3>Questions List</h3>
+            <table id="questionsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Question</th>
+                        <th>Correct Answer</th>
+                        <th>Option 1</th>
+                        <th>Option 2</th>
+                        <th>Option 3</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <div class="settings-section" id="settings">
+            <h2>Settings</h2>
+            <h3>Change Admin Password</h3>
+            <input type="password" placeholder="New Password" id="adminPassword">
+            <button onclick="updatePassword()">Update</button>
+            <h3>Manage User Roles</h3>
+            <table id="rolesTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Change Role</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <h3>Quiz Configuration</h3>
+            <label>Time Limit: <input type="number" id="timeLimit"></label>
+            <button onclick="updateConfig()">Save</button>
+            <h3>System Logs</h3>
+            <table id="logsTable">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Action</th>
+                        <th>User</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function showSection(section) {
+            document.querySelectorAll('.dashboard-section, .content-section, .settings-section, .user-list, userList').forEach(el => el.style.display = 'none');
+            document.getElementById(section).style.display = 'block';
+
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("userList").style.display = "none"; // Hide the user list initially
+        });
+        function addQuestion() {
+            alert("Functionality to add questions coming soon!");
+        }
+        function updatePassword() {
+            alert("Admin password updated!");
+        }
+        function updateConfig() {
+            alert("Quiz settings updated!");
+        }
+
+        function toggleUserList() {
+            var userList = document.getElementById("userList");
+            if (userList.style.display === "none" || userList.style.display === "") {
+                userList.style.display = "block";
+            } else {
+                userList.style.display = "none";
+            }
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+    fetchUsers();
+});
+
+function fetchUsers() {
+    fetch('/get_users')
+    .then(response => response.json())
+    .then(data => {
+        let tableBody = document.querySelector("#usersTable tbody");
+        tableBody.innerHTML = "";
+
+        data.forEach(user => {
+            let row = `
+                <tr id="user-${user.user_id}">
+                    <td>${user.user_id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.role}</td>
+                    <td>${user.email}</td>
+                    <td>${user.birthdate}</td>
+                    <td>
+                        <button onclick="editUser(${user.user_id})">Edit</button>
+                        <button onclick="deleteUser(${user.user_id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+    })
+    .catch(error => console.error('Error fetching users:', error));
+}
+
+function addUser() {
+    let username = document.getElementById("newUsername").value;
+    let password = document.getElementById("newPassword").value;
+    let role = document.getElementById("newRole").value;
+    let email = document.getElementById("newEmail").value;
+    let birthdate = document.getElementById("newBirthdate").value;
+
+    fetch('/add_user', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            username: username,
+            password: password,
+            role: role,
+            email: email,
+            birthdate: birthdate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        fetchUsers();
+    })
+    .catch(error => console.error('Error adding user:', error));
+}
+
+function editUser(id) {
+    let newUsername = prompt("Enter new username:", document.querySelector(`#user-${id} td:nth-child(2)`).innerText);
+    let newRole = prompt("Enter new role (admin/user):", document.querySelector(`#user-${id} td:nth-child(3)`).innerText);
+    let newEmail = prompt("Enter new email:", document.querySelector(`#user-${id} td:nth-child(4)`).innerText);
+    let newBirthdate = prompt("Enter new birthdate:", document.querySelector(`#user-${id} td:nth-child(5)`).innerText);
+
+    if (newUsername && newRole && newEmail && newBirthdate) {
+        fetch(`/edit_user/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: newUsername,
+                role: newRole,
+                email: newEmail,
+                birthdate: newBirthdate
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.error); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message);
+            fetchUsers();
+        })
+        .catch(error => {
+            console.error('Error editing user:', error);
+            alert("Error: " + error.message);
+        });
+    }
+}
+
+
+function deleteUser(id) {
+    if (confirm("Are you sure you want to delete this user?")) {
+        fetch(`/delete_user/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            fetchUsers();
+        })
+        .catch(error => console.error('Error deleting user:', error));
+    }
+}
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    fetchQuestions();
+});
+
+function fetchQuestions() {
+    fetch('/get_questions')
+    .then(response => response.json())
+    .then(data => {
+        let tableBody = document.querySelector("#questionsTable tbody");
+        tableBody.innerHTML = "";
+
+        data.forEach(question => {
+            let row = `
+                <tr id="question-${question.question_id}">
+                    <td>${question.question_id}</td>
+                    <td>${question.question_text}</td>
+                    <td>${question.correct_answer}</td>
+                    <td>${question.option_1}</td>
+                    <td>${question.option_2}</td>
+                    <td>${question.option_3}</td>
+                    <td>
+                        <button onclick="editQuestion(${question.question_id})">Edit</button>
+                        <button onclick="deleteQuestion(${question.question_id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+    })
+    .catch(error => console.error('Error fetching questions:', error));
+}
+
+function addQuestion() {
+    let questionText = document.getElementById("newQuestion").value;
+    let correctAnswer = document.getElementById("newCorrectAnswer").value;
+    let option1 = document.getElementById("newOption1").value;
+    let option2 = document.getElementById("newOption2").value;
+    let option3 = document.getElementById("newOption3").value;
+
+    fetch('/add_question', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            question_text: questionText,
+            correct_answer: correctAnswer,
+            option_1: option1,
+            option_2: option2,
+            option_3: option3
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        fetchQuestions();
+    })
+    .catch(error => console.error('Error adding question:', error));
+}
+
+function editQuestion(id) {
+    let newQuestionText = prompt("Enter new question:", document.querySelector(`#question-${id} td:nth-child(2)`).innerText);
+    let newCorrectAnswer = prompt("Enter new correct answer:", document.querySelector(`#question-${id} td:nth-child(3)`).innerText);
+    let newOption1 = prompt("Enter new option 1:", document.querySelector(`#question-${id} td:nth-child(4)`).innerText);
+    let newOption2 = prompt("Enter new option 2:", document.querySelector(`#question-${id} td:nth-child(5)`).innerText);
+    let newOption3 = prompt("Enter new option 3:", document.querySelector(`#question-${id} td:nth-child(6)`).innerText);
+
+    if (newQuestionText && newCorrectAnswer && newOption1 && newOption2 && newOption3) {
+        fetch(`/edit_question/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                question_text: newQuestionText,
+                correct_answer: newCorrectAnswer,
+                option_1: newOption1,
+                option_2: newOption2,
+                option_3: newOption3
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            fetchQuestions();
+        })
+        .catch(error => console.error('Error editing question:', error));
+    }
+}
+
+
+function deleteQuestion(id) {
+    if (confirm("Are you sure you want to delete this question?")) {
+        fetch(`/delete_question/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            fetchQuestions();
+        })
+        .catch(error => console.error('Error deleting question:', error));
+    }
+}
+
+    </script>
+</body>
+</html>

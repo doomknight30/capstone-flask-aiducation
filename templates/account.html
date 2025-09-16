@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+         body {
+            overflow-y: auto; /* vertical scrollbar if needed */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+
+            background: linear-gradient(135deg, #4d6378, #283949, #182c3f, #051423);
+            background-size: 400% 400%;
+            animation: randomGradient 20s ease-in-out infinite;
+
+            position: relative;
+
+            /* Fade in body */
+            opacity: 0;
+            animation: fadeIn 2s ease-in forwards, randomGradient 20s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* Container for stars only at bottom */
+        #stars-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40vh; /* only lower 40% of the screen */
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* Star shape */
+        .star {
+            position: absolute;
+            background: white;
+            opacity: 0.3;
+            clip-path: polygon(
+                50% 0%, 61% 35%, 98% 35%, 
+                68% 57%, 79% 91%, 50% 70%, 
+                21% 91%, 32% 57%, 2% 35%, 
+                39% 35%
+            );
+            animation: twinkle 3s infinite alternate ease-in-out;
+        }
+
+        @keyframes twinkle {
+            from { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+            to { opacity: 0.7; transform: scale(1.3) rotate(15deg); }
+        }
+
+        @keyframes randomGradient {
+            0% { background-position: 20% 30%; }
+            20% { background-position: 80% 40%; }
+            40% { background-position: 60% 80%; }
+            60% { background-position: 30% 20%; }
+            80% { background-position: 90% 70%; }
+            100% { background-position: 20% 30%; }
+        }
+
+        .container {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 595px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        label {
+            width: 100%;
+            text-align: left;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            background: #27ae60;
+            color: #fff;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #2ecc71;
+            transform: scale(1.02);
+        }
+
+        .message {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #f1c40f;
+        }
+
+        /* Child Account Section Styles */
+        .child-account-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .child-account-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .child-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            width: 100%;
+            text-align: left;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            outline: none;
+        }
+
+        .form-group select option {
+            background: #2c3e50;
+            color: #fff;
+        }
+
+        .child-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            background: #e74c3c;
+            color: #fff;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .child-btn:hover {
+            background: #c0392b;
+            transform: scale(1.02);
+        }
+
+        /* Navigation Panel Styles */
+        .nav-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.active {
+            background: #008080;
+            color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 128, 128, 0.3);
+        }
+
+        /* Content Section Styles */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .container {
+                width: 90%;
+            }
+
+            h2 {
+                font-size: 22px;
+            }
+
+            .nav-panel {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .nav-btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .form-group {
+                margin-bottom: 10px;
+            }
+        }
+        /* Header */
+        .header {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .header .logo {
+            font-size: 40px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #ffffff; /* cursor effect */
+            width: 0; /* start hidden */
+            display: inline-block;
+            position: relative;
+            margin-left: 20px; /* pushes it to the right */
+
+            /* typing effect */
+            animation: typing 4s steps(12, end) forwards,
+                    blink 0.6s step-end infinite;
+        }
+
+        /* typing animation */
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 12ch; } /* "AI-ducation" = 12 characters */
+        }
+
+        /* blinking cursor */
+        @keyframes blink {
+            70% { border-color: transparent; }
+        }
+
+        .header .logo::after {
+            content: "📖"; /* open book */
+            color: #ffffff; /* white */
+            font-size: 1.1em; /* bigger than before */
+            opacity: 0;
+            margin-left: 1px; /* a little more spacing */
+            display: inline-block;
+            animation: bookAppear 1s ease forwards;
+            animation-delay: 4s; /* after typing */
+            transform: translateY(-4px); /* shift upward */
+        }
+
+        /* book fade & slide in */
+        @keyframes bookAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-4px) scale(1); /* keep upward shift */
+            }
+        }
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 15px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">AI-ducation</div>
+        <div class="nav-links">
+            <a href="{{url_for('homepage')}}">Home</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+            <a href="{{url_for('logout')}}">LogOut</a>
+        </div>
+    </div>
+
+    <div id="stars-container"></div>
+
+    <script>
+    const container = document.getElementById("stars-container");
+
+    for (let i = 0; i < 40; i++) {
+        const star = document.createElement("div");
+        star.classList.add("star");
+
+        // random position but only inside the lower container
+        star.style.top = Math.random() * 100 + "%";
+        star.style.left = Math.random() * 100 + "%";
+
+        // random size (8px–15px)
+        const size = Math.random() * 7 + 8;
+        star.style.width = size + "px";
+        star.style.height = size + "px";
+
+        // random twinkle timing
+        star.style.animationDuration = (2 + Math.random() * 3) + "s";
+        star.style.animationDelay = Math.random() * 5 + "s";
+
+        container.appendChild(star);
+    }
+    </script>
+
+    <div class="container">
+        <!-- Navigation Panel -->
+        <div class="nav-panel">
+            <button class="nav-btn active" onclick="showSection('account-settings')">Account Settings</button>
+            {% if user.role == 'parent' %}
+            <button class="nav-btn" onclick="showSection('child-account')">Kid Account</button>
+            {% endif %}
+        </div>
+
+        <!-- Account Settings Section -->
+        <div id="account-settings" class="content-section active">
+            <h2>Account Settings</h2>
+            <form action="{{ url_for('account_settings') }}" method="post">
+                <label for="username">New Username:</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}" required>
+
+                <label for="email">New Email:</label>
+                <input type="email" id="email" name="email" value="{{ user.email }}" required>
+
+                <label for="password">New Password:</label>
+                <input type="password" id="password" name="password" placeholder="Enter new password">
+
+                <button type="submit">Update Account</button>
+            </form>
+        </div>
+
+        <!-- Kid Account Creation Section - Only visible to parents -->
+        {% if user.role == 'parent' %}
+        <div id="child-account" class="content-section">
+            <h2>Kid Account Management</h2>
+            <form action="{{ url_for('create_child_account') }}" method="post" class="child-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="child_username">Child Username:</label>
+                        <input type="text" id="child_username" name="child_username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="child_password">Child Password:</label>
+                        <input type="password" id="child_password" name="child_password" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="child_first_name">Child First Name:</label>
+                        <input type="text" id="child_first_name" name="child_first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="child_last_name">Child Last Name:</label>
+                        <input type="text" id="child_last_name" name="child_last_name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="child_birthdate">Child Birthdate:</label>
+                        <input type="date" id="child_birthdate" name="child_birthdate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="child_year_level">Grade Level:</label>
+                        <select id="child_year_level" name="child_year_level" required>
+                            <option value="">Select Grade</option>
+                            <option value="Grade 1">Grade 1</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="child_school">School:</label>
+                    <input type="text" id="child_school" name="child_school" required>
+                </div>
+                <button type="submit" class="child-btn">Create Child Account</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if message %}
+            <p class="message">{{ message }}</p>
+        {% endif %}
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all content sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active class from all nav buttons
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected section
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+            }
+
+            // Add active class to clicked button
+            const clickedButton = event.target;
+            clickedButton.classList.add('active');
+        }
+    </script>
+</body>
+</html>
