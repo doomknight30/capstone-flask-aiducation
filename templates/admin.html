@@ -352,17 +352,12 @@
             </table>
         </div>
         
-        <div class="content-section" id="manageContent">
+        <div class="questionsSection" id="manageContent" style="display: none;">
             <h2>Manage Questions</h2>
-        
-            <h3>Add Question</h3>
-            <input type="text" id="newQuestion" placeholder="Enter question">
-            <input type="text" id="newCorrectAnswer" placeholder="Correct answer">
-            <input type="text" id="newOption1" placeholder="Option 1">
-            <input type="text" id="newOption2" placeholder="Option 2">
-            <input type="text" id="newOption3" placeholder="Option 3">
-            <button onclick="addQuestion()">Add Question</button>
-        
+
+            <!-- Search bar for filtering by creator -->
+            <input type="text" id="questionCreatorSearch" placeholder="Search by creator..." style="margin-bottom:15px; padding:8px; border-radius:6px; border:none; width:220px;">
+
             <h3>Questions List</h3>
             <table id="questionsTable">
                 <thead>
@@ -373,6 +368,8 @@
                         <th>Option 1</th>
                         <th>Option 2</th>
                         <th>Option 3</th>
+                        <th>Quiz Type</th>
+                        <th>Creator</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -414,9 +411,21 @@
     </div>
     <script>
         function showSection(section) {
-            document.querySelectorAll('.dashboard-section, .content-section, .settings-section, .user-list, userList').forEach(el => el.style.display = 'none');
-            document.getElementById(section).style.display = 'block';
-
+            // Hide all sections
+            document.querySelectorAll('.dashboard-section, .questionsSection, .settings-section, .user-list').forEach(el => el.style.display = 'none');
+            // Show the selected section
+            var target = document.getElementById(section);
+            if (target) {
+                target.style.display = 'block';
+                // If showing the questions section, fetch questions
+                if (section === 'manageContent') {
+                    fetchQuestions();
+                }
+                // If showing the users section, fetch users
+                if (section === 'userList') {
+                    fetchUsers();
+                }
+            }
         }
         document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("userList").style.display = "none"; // Hide the user list initially
@@ -552,33 +561,70 @@ document.addEventListener("DOMContentLoaded", function() {
     fetchQuestions();
 });
 
+let allQuestionsData = []; // Store all questions globally for filtering
+
 function fetchQuestions() {
     fetch('/get_questions')
     .then(response => response.json())
     .then(data => {
-        let tableBody = document.querySelector("#questionsTable tbody");
-        tableBody.innerHTML = "";
-
-        data.forEach(question => {
-            let row = `
-                <tr id="question-${question.question_id}">
-                    <td>${question.question_id}</td>
-                    <td>${question.question_text}</td>
-                    <td>${question.correct_answer}</td>
-                    <td>${question.option_1}</td>
-                    <td>${question.option_2}</td>
-                    <td>${question.option_3}</td>
-                    <td>
-                        <button onclick="editQuestion(${question.question_id})">Edit</button>
-                        <button onclick="deleteQuestion(${question.question_id})">Delete</button>
-                    </td>
-                </tr>
-            `;
-            tableBody.innerHTML += row;
-        });
+        allQuestionsData = data; // Save for filtering
+        renderQuestionsTable(data);
     })
     .catch(error => console.error('Error fetching questions:', error));
 }
+
+function renderQuestionsTable(data) {
+    let tableBody = document.querySelector("#questionsTable tbody");
+    tableBody.innerHTML = "";
+
+    data.forEach(question => {
+        // Parse choices if stored as JSON string
+        let choices = [];
+        try {
+            choices = typeof question.choices === "string" ? JSON.parse(question.choices) : question.choices;
+        } catch (e) {
+            choices = question.choices || [];
+        }
+
+        let option1 = choices[0] || "";
+        let option2 = choices[1] || "";
+        let option3 = choices[2] || "";
+        let quizType = question.source === "group_exam" ? "Group" : "Individual";
+        let creator = question.creator || "";
+
+        let row = `
+            <tr id="question-${question.question_id}">
+                <td>${question.question_id}</td>
+                <td>${question.question}</td>
+                <td>${question.correct_answer}</td>
+                <td>${option1}</td>
+                <td>${option2}</td>
+                <td>${option3}</td>
+                <td>${quizType}</td>
+                <td>${creator}</td>
+                <td>
+                    <button onclick="editQuestion(${question.question_id})">Edit</button>
+                    <button onclick="deleteQuestion(${question.question_id})">Delete</button>
+                </td>
+            </tr>
+        `;
+        tableBody.innerHTML += row;
+    });
+}
+
+// Search/filter functionality for creator
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.getElementById("questionCreatorSearch");
+    if (searchInput) {
+        searchInput.addEventListener("input", function() {
+            const searchValue = searchInput.value.trim().toLowerCase();
+            const filtered = allQuestionsData.filter(q =>
+                (q.creator || "").toLowerCase().includes(searchValue)
+            );
+            renderQuestionsTable(filtered);
+        });
+    }
+});
 
 function addQuestion() {
     let questionText = document.getElementById("newQuestion").value;
@@ -649,6 +695,6 @@ function deleteQuestion(id) {
     }
 }
 
-    </script>
+</script>
 </body>
 </html>

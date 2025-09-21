@@ -5,6 +5,10 @@
     <title>Customize Your Quiz</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet" />
     <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
+        }   
         * {
             margin: 0;
             padding: 0;
@@ -348,6 +352,26 @@
             <button type="submit">Proceed to Quiz</button>
         </form>
     </div>
+    <div id="loading-overlay" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; width:100vw; height:100vh;
+    background:rgba(20,30,40,0.85);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+">
+    <div style="color:#fff; font-size:2em; margin-bottom:20px;">Generating your quiz...</div>
+    <div class="spinner" style="
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #008080;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+    "></div>
+</div>
     <script>
         // Show/hide time limit input based on selection
         document.getElementById('timed').addEventListener('change', function() {
@@ -369,6 +393,9 @@
                     <input type="file" id="upload-file" name="upload_file" accept=".pdf,.doc,.docx,.txt" style="width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.2);color:#222;">
                 `;
             }
+        });
+        document.getElementById('quiz-customization-form').addEventListener('submit', function() {
+            document.getElementById('loading-overlay').style.display = 'flex';
         });
     </script>
 </body>

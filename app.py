@@ -13,6 +13,8 @@ from flask import Flask
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
+load_dotenv()
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "fallback_secret")
 group_rooms = {}
@@ -824,6 +826,45 @@ def delete_user(user_id):
     conn.close()
 
     return jsonify({"message": "User deleted successfully"})
+
+@app.route('/get_questions', methods=['GET'])
+def get_questions():
+    """
+    Retrieve all questions from custom_quiz_questions and group_exam_questions,
+    including the creator (username) for each question.
+    Returns a JSON list with a 'source' field and 'creator' field.
+    """
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # Fetch from custom_quiz_questions and join with custom_quizzes to get creator
+    cursor.execute("""
+        SELECT 
+            q.question_id, q.quiz_id, q.question_number, q.passage, q.question, q.choices, q.correct_answer, 
+            'custom_quiz' AS source,
+            cq.creator_username AS creator
+        FROM custom_quiz_questions q
+        JOIN custom_quizzes cq ON q.quiz_id = cq.quiz_id
+    """)
+    custom_questions = cursor.fetchall()
+
+    # Fetch from group_exam_questions and join with group_exams to get host (creator)
+    cursor.execute("""
+        SELECT 
+            q.id AS question_id, q.group_id, q.question_number, q.passage, q.question, q.choices, q.correct_answer, 
+            'group_exam' AS source,
+            ge.host_username AS creator
+        FROM group_exam_questions q
+        JOIN group_exams ge ON q.group_id = ge.group_id
+    """)
+    group_questions = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    # Combine and return as JSON
+    all_questions = custom_questions + group_questions
+    return jsonify(all_questions)
 
 @app.route('/dashboard')
 def dashboard():
