@@ -12,6 +12,7 @@ from flask_dance.contrib.google import make_google_blueprint, google
 from flask import Flask
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
@@ -52,6 +53,41 @@ def gemini_complete(messages, model_name="gemini-2.5-flash"):
 
 # File upload config
 ALLOWED_EXTENSIONS = {"pdf", "docx", "txt"}
+
+def fetch_book_text(read_link):
+    """
+    Fetch and extract the main text from a Project Gutenberg HTML or plain text link.
+    Returns a string with the book's content, or raises Exception.
+    """
+    try:
+        # Prefer HTML, fallback to plain text
+        if read_link.endswith('.htm') or read_link.endswith('.html'):
+            resp = requests.get(read_link, timeout=10)
+            resp.raise_for_status()
+            html = resp.text
+            # Try to extract the main content between <body> tags
+            body_match = re.search(r'<body.*?>(.*?)</body>', html, re.DOTALL | re.IGNORECASE)
+            if body_match:
+                text = re.sub('<[^<]+?>', '', body_match.group(1))  # Remove HTML tags
+            else:
+                text = re.sub('<[^<]+?>', '', html)
+            # Remove extra whitespace
+            text = re.sub(r'\s+', ' ', text)
+            return text.strip()
+        else:
+            # Assume plain text
+            resp = requests.get(read_link, timeout=10)
+            resp.raise_for_status()
+            text = resp.text
+            # Try to remove Gutenberg header/footer if present
+            start = text.find("*** START OF")
+            end = text.find("*** END OF")
+            if start != -1 and end != -1:
+                text = text[start:end]
+            return text.strip()
+    except Exception as e:
+        print(f"Error fetching book text: {e}")
+        raise Exception("Could not fetch or process the book content.")
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -135,7 +171,7 @@ def home():
                 session["score"] = 0
                 session["question_count"] = 0
                 session["role"] = user.get("role")
-                
+                session["user_id"] = user["user_id"]
                 return redirect(url_for("homepage"))
             else:
                 error = "Invalid username or password"
@@ -155,12 +191,51 @@ def quiz_customization():
         return redirect(url_for("home"))
     return render_template("quiz-customization.html")
 
+def fetch_book_text(read_link):
+    """
+    Fetch and extract the main text from a Project Gutenberg plain text link.
+    Returns a string with the book's content, or raises Exception.
+    """
+    try:
+        # Download only the first 200KB to avoid incomplete reads and huge files
+        resp = requests.get(read_link, timeout=10, stream=True)
+        resp.raise_for_status()
+        content = b""
+        max_bytes = 200_000  # 200 KB
+        for chunk in resp.iter_content(8192):
+            content += chunk
+            if len(content) > max_bytes:
+                break
+        text = content.decode("utf-8", errors="ignore")
+        # Remove Gutenberg header/footer
+        start_match = re.search(r"\*\*\* START OF(.*?)\*\*\*", text, re.DOTALL)
+        end_match = re.search(r"\*\*\* END OF(.*?)\*\*\*", text, re.DOTALL)
+        start = start_match.end() if start_match else 0
+        end = end_match.start() if end_match else len(text)
+        main_text = text[start:end].strip()
+        # Optionally, further clean up whitespace
+        main_text = re.sub(r'\s+', ' ', main_text)
+        return main_text
+    except Exception as e:
+        print(f"Error fetching book text: {e}")
+        return ""
+
+def get_book_text_from_db(book_id, user_id):
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT read_link FROM selected_books WHERE id = %s AND user_id = %s", (book_id, user_id))
+    book = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not book:
+        return ""
+    return fetch_book_text(book["read_link"])
+
 @app.route("/start_quiz_custom", methods=["POST"])
 def start_quiz_custom():
     if "username" not in session:
         return redirect(url_for("home"))
 
-    # Get customization info from form
     quiz_format = request.form.get("format")
     num_items = int(request.form.get("num_items", 5))
     timed = request.form.get("timed")
@@ -176,21 +251,43 @@ def start_quiz_custom():
     session["timed"] = timed
     session["time_limit"] = time_limit
 
-    # Get prompt or file
+    # Get prompt, file, or book
+    quiz_source_content = ""
     if quiz_format == "prompt":
         session["quiz_prompt"] = request.form.get("prompt_text")
         session["quiz_source_type"] = "prompt"
+        quiz_source_content = session["quiz_prompt"]
     elif quiz_format == "upload":
         file = request.files.get("upload_file")
         if file and allowed_file(file.filename):
             try:
                 full_text = extract_text_from_uploaded_file(file)
-                session["quiz_uploaded_text"] = full_text[:2000]  # Limit to first 10,000 chars
+                session["quiz_uploaded_text"] = full_text[:2000]  # Limit to first 2,000 chars
                 session["quiz_source_type"] = "upload"
+                quiz_source_content = session["quiz_uploaded_text"]
             except Exception as e:
                 return render_template("quiz-customization.html", error=str(e))
         else:
             return render_template("quiz-customization.html", error="Invalid or missing file.")
+    elif quiz_format == "library":
+        # Handle library book selection
+        book_id = request.form.get("library_book_id")
+        if not book_id:
+            return render_template("quiz-customization.html", error="No book selected.")
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT title, authors, read_link FROM selected_books WHERE id = %s AND user_id = %s", (book_id, session.get("user_id")))
+        book = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if not book:
+            return render_template("quiz-customization.html", error="Book not found.")
+        session["quiz_book_id"] = book_id  # Only store the book ID in session
+        session["quiz_book_title"] = book["title"]
+        session["quiz_book_authors"] = book["authors"]
+        session["quiz_book_read_link"] = book["read_link"]
+        session["quiz_source_type"] = "library"
+        quiz_source_content = f"{book['title']} by {book['authors']}"
     else:
         return render_template("quiz-customization.html", error="Invalid quiz format.")
 
@@ -205,8 +302,18 @@ def start_quiz_custom():
     for i in range(num_items):
         if quiz_format == "prompt":
             passage = generate_varied_reading_comprehension_text(session["quiz_prompt"], i+1)
-        else:
+        elif quiz_format == "upload":
             passage = select_relevant_excerpt_with_variety(session["quiz_uploaded_text"], [q["passage"] for q in questions])
+        elif quiz_format == "library":
+            # Fetch and process book content on demand
+            book_id = session.get("quiz_book_id")
+            user_id = session.get("user_id")
+            book_text = get_book_text_from_db(book_id, user_id)
+            if not book_text:
+                return render_template("quiz-customization.html", error="Could not fetch book content.")
+            passage = select_relevant_excerpt_with_variety(book_text, [q["passage"] for q in questions])
+        else:
+            passage = "No valid source"
         mcq = generate_multiple_choice_question_with_context(passage, i+1)
         questions.append({
             "passage": passage,
@@ -230,7 +337,7 @@ def start_quiz_custom():
         timed,
         time_limit,
         session.get("quiz_source_type"),
-        session.get("quiz_prompt") if quiz_format == "prompt" else session.get("quiz_uploaded_text")
+        quiz_source_content
     ))
     quiz_id = cursor.lastrowid
 
@@ -324,9 +431,39 @@ def quiz():
     else:
         return redirect(url_for("result"))
 
-@app.route('/practice_quiz')
-def practice_quiz():
-    return render_template('practice_quiz.html')
+@app.route('/library')
+def library():
+    return render_template('library.html')
+
+@app.route('/save_book', methods=['POST'])
+def save_book():
+    data = request.json
+    title = data.get('title')
+    authors = data.get('authors')
+    read_link = data.get('read_link')
+    user_id = session.get('user_id')  # Or however you track the user
+
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO selected_books (user_id, title, authors, read_link, selected_at)
+        VALUES (%s, %s, %s, %s, NOW())
+    """, (user_id, title, authors, read_link))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"status": "success"})
+
+@app.route('/get_selected_books')
+def get_selected_books():
+    user_id = session.get('user_id')
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id, title, authors FROM selected_books WHERE user_id = %s", (user_id,))
+    books = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(books)
 
 @app.route('/account', methods=['GET', 'POST'])
 def account_settings():
@@ -688,6 +825,37 @@ def upload_document():
 def admin_dashboard():
     return render_template("admin.html")
 
+# Add announcement (admin only)
+@app.route('/add_announcement', methods=['POST'])
+def add_announcement():
+    if session.get("role") != "admin":
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json
+    title = data.get("title")
+    content = data.get("content")
+    posted_by = session.get("username")
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO announcements (title, content, posted_by) VALUES (%s, %s, %s)",
+        (title, content, posted_by)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"message": "Announcement posted!"})
+
+# Get all announcements (for all users)
+@app.route('/get_announcements')
+def get_announcements():
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM announcements ORDER BY posted_at DESC")
+    announcements = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(announcements)
+
 @app.route("/group_exam")
 def group_exam():
     if 'username' not in session:
@@ -866,52 +1034,52 @@ def get_questions():
     all_questions = custom_questions + group_questions
     return jsonify(all_questions)
 
-@app.route('/dashboard')
+@app.route("/dashboard")
 def dashboard():
-    if 'username' not in session:
-        return redirect(url_for('home'))
+    if "username" not in session:
+        return redirect(url_for("home"))
+    user = session["username"]
 
-    username = session['username']
-    
-    # Establish database connection
-    db = connect_db()
-    cursor = db.cursor()
-
-    # Get user_id based on username
-    user_id = get_user_id(username, cursor)
-
-    if user_id:
-        # Count total quizzes completed
-        cursor.execute("SELECT COUNT(*) FROM user_progress WHERE user_id = %s", (user_id,))
-        quizzes_completed = cursor.fetchone()[0] or 0
-
-        # Calculate average score
-        cursor.execute("SELECT AVG(correct_answers / total_questions * 100) FROM user_progress WHERE user_id = %s AND total_questions > 0", (user_id,))
-        avg_score = cursor.fetchone()[0]
-        avg_score = round(avg_score, 2) if avg_score is not None else 0
-
-        # Get current difficulty (most recent quiz difficulty)
-        cursor.execute("""
-            SELECT current_difficulty 
-            FROM user_progress 
-            WHERE user_id = %s 
-            ORDER BY last_updated DESC LIMIT 1
-        """, (user_id,))
-        current_difficulty = cursor.fetchone()
-        current_difficulty = current_difficulty[0] if current_difficulty else "N/A"  # Default to "N/A" if no quizzes taken
-    else:
-        quizzes_completed = 0
-        avg_score = 0
-        current_difficulty = "N/A"
-
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    # Fetch user's completed quizzes
+    cursor.execute("""
+        SELECT q.quiz_id, q.format, q.num_items, q.timed, q.time_limit, q.created_at, q.source_type, q.source_content
+        FROM custom_quizzes q
+        WHERE q.creator_username = %s
+        ORDER BY q.created_at DESC
+    """, (user,))
+    quizzes = cursor.fetchall()
     cursor.close()
-    db.close()
+    conn.close()
 
-    return render_template('dashboard.html', username=username, 
-                           quizzes_completed=quizzes_completed, 
-                           average_score=avg_score,
-                           current_difficulty=current_difficulty)
-#Plan: Integrate dashboard features to homepage or somewhere else, obsolete page
+    # You can also fetch quizzes_completed and average_score as before
+    quizzes_completed = len(quizzes)
+    average_score = 0  # Compute as needed
+
+    return render_template("dashboard.html", quizzes=quizzes, quizzes_completed=quizzes_completed, average_score=average_score)
+
+@app.route('/get_quiz_questions/<int:quiz_id>')
+def get_quiz_questions(quiz_id):
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT question, passage, choices, correct_answer
+        FROM custom_quiz_questions
+        WHERE quiz_id = %s
+        ORDER BY question_number
+    """, (quiz_id,))
+    questions = cursor.fetchall()
+    for q in questions:
+        # Parse choices from JSON string if needed
+        if isinstance(q["choices"], str):
+            try:
+                q["choices"] = json.loads(q["choices"])
+            except Exception:
+                q["choices"] = []
+    cursor.close()
+    conn.close()
+    return jsonify(questions)
 
 
 @app.route('/set_generated_question', methods=['POST'])
@@ -1593,6 +1761,7 @@ def oauth_success():
             session["guest"] = False
             session["score"] = 0
             session["question_count"] = 0
+            session["user_id"] = user["user_id"] if user else cursor.lastrowid
             
             print(f"User logged in: {session_username}")
             

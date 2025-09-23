@@ -224,6 +224,8 @@
         .dashboard-btn { background: #3b82f6; }
         .admin-btn { background: #8b5cf6; }
         .quiz-btn { background: #008080; }
+        .group-quiz-btn { background: #a7ba93; }
+        .library-btn {background: #cc7229; }
         .practice-btn { background: #ff8c5e; }
         .settings-btn { background: #34495e; }
         .records-btn {background: green;}
@@ -232,7 +234,8 @@
             margin-left: 250px;
             margin-top: 70px;
             padding: 40px;
-            width: calc(100% - 250px);
+            width: 100%;
+            /*max-width: 850px;*/
             display: flex;
             justify-content: center;
             align-items: center;
@@ -244,11 +247,13 @@
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             text-align: center;
-            max-width: 600px;
+            width: 67%;
+            /*max-width: 850px;*/
             max-height: 450px;
             margin-top: -80px;
             overflow-y: auto;  
             border-radius: 12px; /* round edges of the sidebar itself */
+            left: 200px;
 
         }
         .welcome-panel h2 {
@@ -334,13 +339,15 @@
     <!-- Side Toolbar -->
     <div class="sidebar">
         <h3>Quick Navigation</h3>
-        <button class="sidebar-btn dashboard-btn" onclick="location.href='{{ url_for('dashboard') }}'">📊 View Dashboard</button>
+        <button class="sidebar-btn dashboard-btn" onclick="location.href='{{ url_for('dashboard') }}'">📊 View Account Overview</button>
         {% if role == 'admin' %}
         <button class="sidebar-btn admin-btn" onclick="location.href='{{ url_for('admin_dashboard') }}'">⚙️ Admin Panel</button>
         {%elif role == 'teacher' %}
-        <button class="sidebar-btn quiz-btn" onclick="location.href='{{ url_for('group_exam') }}'">📝 Start Group Exam</button>
+        <button class="sidebar-btn group-quiz-btn" onclick="location.href='{{ url_for('group_exam') }}'">📝 Start Group Exam</button>
         <button class="sidebar-btn records-btn" onclick="location.href='{{ url_for( 'records') }}'"> Check Records </button>
         {% endif %}
+        <button class="sidebar-btn library-btn" onclick="location.href='{{ url_for('library')}}'"> View Library</button>
+        <button class="sidebar-btn quiz-btn" onclick="location.href='{{ url_for('quiz_customization')}}'">Take Quiz</button>
         <button class="sidebar-btn settings-btn" onclick="location.href='{{ url_for('account_settings') }}'">🔧 Account Settings</button>
         <button class="btn practice-btn" onclick="toggleJoinGroup()">Join Group Exam</button>
         <div id="joinGroupArea" style="display:none; margin-top:20px;">
@@ -362,34 +369,8 @@
             </div>
         {% else %}
             <div class="welcome-panel">
-                <h2>Your Exam History</h2>
-                <h3 style="color:#3b82f6; margin-top:20px;">Group Exams</h3>
-                {% if group_exams %}
-                    <ul style="list-style:none; padding:0;">
-                    {% for exam in group_exams %}
-                        <li style="margin-bottom:10px;">
-                            <b>Group ID:</b> {{ exam.group_id }} |
-                            <b>Date:</b> {{ exam.created_at.strftime('%Y-%m-%d %H:%M') if exam.created_at else 'N/A' }} |
-                            <b>Score:</b> {{ exam.score }}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No group exams taken yet.</p>
-                {% endif %}
-                <h3 style="color:#ff8c5e; margin-top:20px;">Individual Quizzes</h3>
-                {% if quiz_exams %}
-                    <ul style="list-style:none; padding:0;">
-                    {% for quiz in quiz_exams %}
-                        <li style="margin-bottom:10px;">
-                            <b>Date:</b> {{ quiz.last_updated.strftime('%Y-%m-%d %H:%M') if quiz.last_updated else 'N/A' }} |
-                            <b>Score:</b> {{ quiz.correct_answers }}/{{ quiz.total_questions }}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No quizzes taken yet.</p>
-                {% endif %}
+                <h2>News & Announcements</h2>
+                <div id="announcementsList" style="margin-top: 24px; text-align: left;"></div>
             </div>
         {% endif %}
     </div>
@@ -399,6 +380,28 @@
         var area = document.getElementById('joinGroupArea');
         area.style.display = (area.style.display === 'none' || area.style.display === '') ? 'block' : 'none';
     }
+    function fetchAnnouncements() {
+        fetch('/get_announcements')
+        .then(res => res.json())
+        .then(data => {
+            let html = "";
+            if (data.length === 0) {
+                html = "<p>No announcements yet.</p>";
+            } else {
+                html = data.map(a => `
+                    <div style="background:rgba(0,0,0,0.13);margin-bottom:16px;padding:12px 16px;border-radius:8px;">
+                        <b>${a.title}</b>
+                        <div style="font-size:0.97em;margin:8px 0 4px 0;">${a.content}</div>
+                        <span style="font-size:0.9em;color:#b2e0e0;">Posted by ${a.posted_by} on ${a.posted_at ? a.posted_at.replace('T',' ').slice(0,16) : ''}</span>
+                    </div>
+                `).join('');
+            }
+            document.getElementById("announcementsList").innerHTML = html;
+        });
+    }
+
+    // Fetch announcements when the page loads
+    document.addEventListener("DOMContentLoaded", fetchAnnouncements);
     </script>
 </body>
 </html>

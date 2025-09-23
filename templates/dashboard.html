@@ -227,11 +227,11 @@
             margin-top: 30px;
             justify-content: center;
             align-items: flex-start;
-            width: 80%;
+            width: 100%;
         }
         .container, .progress-panel {
-            width: 50%;
-            height: 400px;  /* fixed manual height */
+            width: 100%;
+            height: auto;  /* fixed manual height */
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             padding: 25px;
@@ -270,6 +270,36 @@
                 }
             }
         }
+    }
+    function viewQuestions(quiz_id) {
+        fetch(`/get_quiz_questions/${quiz_id}`)
+            .then(res => res.json())
+            .then(data => {
+                let html = "";
+                if (data.length === 0) {
+                    html = "<p>No questions found for this quiz.</p>";
+                } else {
+                    data.forEach((q, i) => {
+                        html += `<div style="margin-bottom:24px;text-align:left;">
+                            <b>Q${i+1}:</b> ${q.question}<br>
+                            <span style="color:#008080;"><i>Passage:</i></span>
+                            <div style="background:#f5f5f5;color:#222;padding:8px 10px;border-radius:6px;margin:6px 0 10px 0;max-height:90px;overflow:auto;font-size:0.98em;">
+                                ${q.passage ? q.passage : "<i>No passage available.</i>"}
+                            </div>
+                            <b>Choices:</b>
+                            <ul style="margin:0 0 8px 20px;">
+                                ${q.choices.map(c => `<li>${c}</li>`).join('')}
+                            </ul>
+                            <b>Correct Answer:</b> <span style="color:#008080;">${q.correct_answer}</span>
+                        </div>`;
+                    });
+                }
+                document.getElementById("modalQuestions").innerHTML = html;
+                document.getElementById("questionsModal").style.display = "flex";
+            });
+    }
+    function closeModal() {
+        document.getElementById("questionsModal").style.display = "none";
     }
 </script>
 <body>
@@ -320,19 +350,50 @@
     }
     </script>
 
-    <div class="main-content">
-        <div class="container">
-            <h2>Welcome, {{ username }}!</h2>
-            <p>Choose an option below:</p>
-            <button class="btn quiz-btn" onclick="location.href='/start_quiz'">Take a Quiz</button>
-            <button class="btn practice-btn" onclick="location.href='/practice_quiz'" disabled>Take a Practice Quiz</button>
-            <button class="btn settings-btn" onclick="location.href='/account'">Account Settings</button>
-        </div>
-        <div class="progress-panel">
+    <div class="main-content" style="display: flex; flex-direction: column; align-items: center;">
+        <div class="progress-panel" style="text-align:center;">
             <h3>Your Progress</h3>
             <p>Quizzes Completed: {{ quizzes_completed }}</p>
             <p>Average Score: {{ average_score }}%</p>
-            
+        </div>
+        <div class="container" style="width: 100%;  margin: 0 auto;">
+            <h3 style="text-align:center;">Your Past Exams</h3>
+            {% if quizzes %}
+            <table style="width:100%;margin-top:20px;background:rgba(255,255,255,0.08);border-radius:8px;text-align:center;">
+                <thead>
+                    <tr>
+                        <th>Quiz ID</th>
+                        <th>Format</th>
+                        <th>Date</th>
+                        <th>Questions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for quiz in quizzes %}
+                    <tr>
+                        <td>{{ quiz.quiz_id }}</td>
+                        <td>{{ quiz.format|capitalize }}</td>
+                        <td>{{ quiz.created_at.strftime('%Y-%m-%d') if quiz.created_at else '' }}</td>
+                        <td>
+                            <button onclick="viewQuestions({{ quiz.quiz_id }})" style="padding:6px 14px;border-radius:6px;background:#008080;color:#fff;border:none;cursor:pointer;">View Questions</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="margin-top:30px;text-align:center;">No past exams found.</p>
+            {% endif %}
+        </div>
+            <div id="questionsModal"
+                style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;"
+                onclick="if(event.target === this) closeModal();">
+                <div style="background:#fff;color:#222;padding:30px 20px;border-radius:12px;width:85%;max-height:80vh;overflow-y:auto;position:relative; margin:auto;">
+                    <button onclick="closeModal()" style="position:absolute;top:10px;right:18px;background:none;border:none;font-size:1.5em;cursor:pointer;">&times;</button>
+                    <h4 style="text-align:center;">Quiz Questions</h4>
+                    <div id="modalQuestions"></div>
+                </div>
+            </div>
         </div>
     </div>
 </body>

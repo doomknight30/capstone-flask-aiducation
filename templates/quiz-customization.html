@@ -281,10 +281,10 @@
             <div class="bar"></div>
         </div>
         <div id="dropdownMenu" class="dropdown-menu">
-            <a href="#">Home</a>
+            <a href="{{ url_for('homepage') }}">Home</a>
             <a href="#">About</a>
             <a href="#">Contact</a>
-            <a href="#">LogOut</a>
+            <a href="{{ url_for('logout') }}">LogOut</a>
         </div>
     </div>
 
@@ -321,6 +321,7 @@
             <select id="format" name="format" required>
                 <option value="prompt">Prompt</option>
                 <option value="upload">Upload</option>
+                <option value="library">Library Book</option>
             </select>
 
             <div id="format-box" style="margin-top: 15px;">
@@ -373,6 +374,16 @@
     "></div>
 </div>
     <script>
+        // Fetch user's selected books for the library dropdown
+        let userBooks = [];
+        function fetchUserBooks() {
+            fetch('/get_selected_books')
+                .then(res => res.json())
+                .then(data => { userBooks = data; })
+                .catch(() => { userBooks = []; });
+        }
+        fetchUserBooks();
+
         // Show/hide time limit input based on selection
         document.getElementById('timed').addEventListener('change', function() {
             document.getElementById('time-limit-section').style.display =
@@ -387,13 +398,29 @@
                     <label for="prompt-text">Enter your prompt:</label>
                     <textarea id="prompt-text" name="prompt_text" rows="4" style="width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.2);color:#222;"></textarea>
                 `;
-            } else {
+            } else if (this.value === 'upload') {
                 box.innerHTML = `
                     <label for="upload-file">Upload your file:</label>
                     <input type="file" id="upload-file" name="upload_file" accept=".pdf,.doc,.docx,.txt" style="width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.2);color:#222;">
                 `;
+            } else if (this.value === 'library') {
+                // Build dropdown from userBooks
+                let options = userBooks.length
+                    ? userBooks.map(b => {
+                        let displayTitle = b.title.length > 40 ? b.title.slice(0, 37) + "..." : b.title;
+                        let displayAuthors = b.authors.length > 30 ? b.authors.slice(0, 27) + "..." : b.authors;
+                        return `<option value="${b.id}" title="${b.title} by ${b.authors}">${displayTitle} by ${displayAuthors}</option>`;
+                    }).join('')
+                    : '<option value="">No books found</option>';
+                box.innerHTML = `
+                    <label for="library-book">Select a book from your library:</label>
+                    <select id="library-book" name="library_book_id" style="width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.2);color:#222;">
+                        ${options}
+                    </select>
+                `;
             }
         });
+
         document.getElementById('quiz-customization-form').addEventListener('submit', function() {
             document.getElementById('loading-overlay').style.display = 'flex';
         });
