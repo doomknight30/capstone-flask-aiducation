@@ -304,7 +304,7 @@
         <div class="logo">AI-ducation</div>
         <div class="nav-links">
             <a href="{{ url_for('homepage') }}">Home</a>
-            <a href="#">About</a>
+            <a href="{{ url_for('user_manual')}}" target="_blank">User Manual</a>
             <a href="#">Contact</a>
             <a href="{{ url_for('logout') }}">LogOut</a>
         </div>
@@ -365,7 +365,7 @@
             <div class="welcome-panel">
                 <h2>Welcome, {{ first_name }}!</h2>
                 <p>Welcome to AI-ducation! Your personalized learning journey starts here. Use the sidebar to navigate through different features and start exploring.</p>
-                <button class="btn quiz-btn" onclick="location.href='{{ url_for('homepage') }}'">Get Started</button>
+                <button class="btn quiz-btn" onclick="location.href='{{ url_for('user_manual') }}'" target="_blank">Get Started</button>
             </div>
         {% else %}
             <div class="welcome-panel">

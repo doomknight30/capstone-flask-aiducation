@@ -244,7 +244,6 @@ def start_quiz_custom():
         time_limit = int(time_limit)
     else:
         time_limit = 0
-    session["time_limit"] = time_limit
 
     session["quiz_format"] = quiz_format
     session["num_items"] = num_items
@@ -262,7 +261,7 @@ def start_quiz_custom():
         if file and allowed_file(file.filename):
             try:
                 full_text = extract_text_from_uploaded_file(file)
-                session["quiz_uploaded_text"] = full_text[:2000]  # Limit to first 2,000 chars
+                session["quiz_uploaded_text"] = full_text[:2000]
                 session["quiz_source_type"] = "upload"
                 quiz_source_content = session["quiz_uploaded_text"]
             except Exception as e:
@@ -270,7 +269,6 @@ def start_quiz_custom():
         else:
             return render_template("quiz-customization.html", error="Invalid or missing file.")
     elif quiz_format == "library":
-        # Handle library book selection
         book_id = request.form.get("library_book_id")
         if not book_id:
             return render_template("quiz-customization.html", error="No book selected.")
@@ -282,7 +280,7 @@ def start_quiz_custom():
         conn.close()
         if not book:
             return render_template("quiz-customization.html", error="Book not found.")
-        session["quiz_book_id"] = book_id  # Only store the book ID in session
+        session["quiz_book_id"] = book_id
         session["quiz_book_title"] = book["title"]
         session["quiz_book_authors"] = book["authors"]
         session["quiz_book_read_link"] = book["read_link"]
@@ -294,10 +292,9 @@ def start_quiz_custom():
     # Reset quiz session counters
     session["score"] = 0
     session["question_count"] = 0
-    session["questions"] = []  # Will hold all generated questions
     session["current_question_index"] = 0
 
-    # Generate all questions up front
+    # Generate all questions up front and save to DB
     questions = []
     for i in range(num_items):
         if quiz_format == "prompt":
@@ -305,7 +302,6 @@ def start_quiz_custom():
         elif quiz_format == "upload":
             passage = select_relevant_excerpt_with_variety(session["quiz_uploaded_text"], [q["passage"] for q in questions])
         elif quiz_format == "library":
-            # Fetch and process book content on demand
             book_id = session.get("quiz_book_id")
             user_id = session.get("user_id")
             book_text = get_book_text_from_db(book_id, user_id)
@@ -321,7 +317,6 @@ def start_quiz_custom():
             "choices": mcq["choices"],
             "correct_answer": mcq["correct_answer"]
         })
-    session["questions"] = questions
 
     db = connect_db()
     cursor = db.cursor()
@@ -359,6 +354,10 @@ def start_quiz_custom():
     cursor.close()
     db.close()
 
+    # Store only quiz_id in session
+    session["quiz_id"] = quiz_id
+    session["current_question_index"] = 0
+
     return redirect(url_for("quiz"))
 
 @app.route("/quiz", methods=["GET", "POST"])
@@ -371,10 +370,17 @@ def quiz():
         session["score"] = 0
     if "question_count" not in session:
         session["question_count"] = 0
-    if "questions" not in session or not session["questions"]:
+    if "quiz_id" not in session:
         return redirect(url_for("quiz_customization"))
 
-    questions = session["questions"]
+    quiz_id = session.get("quiz_id")
+    db = connect_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM custom_quiz_questions WHERE quiz_id = %s ORDER BY question_number", (quiz_id,))
+    questions = cursor.fetchall()
+    cursor.close()
+    db.close()
+
     idx = session.get("current_question_index", 0)
     num_items = session.get("num_items", 5)
 
@@ -386,15 +392,11 @@ def quiz():
             except Exception:
                 session["remaining_time"] = session.get("time_limit", 0) * 60
         else:
-            # On GET, if not set, initialize
             if "remaining_time" not in session or not isinstance(session["remaining_time"], int):
                 session["remaining_time"] = int(session.get("time_limit", 0)) * 60
 
-        # Check if user clicked End Exam
         if request.form.get("end_exam") == "1":
-            # Mark all remaining questions as wrong
-            session["question_count"] = num_items  # All questions attempted
-            # Do not increment score for unanswered
+            session["question_count"] = num_items
             return redirect(url_for("result"))
 
         selected_answer = request.form.get("answer")
@@ -411,15 +413,13 @@ def quiz():
 
         idx += 1
     else:
-        # On GET, if not set, initialize
         if "remaining_time" not in session:
             session["remaining_time"] = session.get("time_limit", 0) * 60
 
-    # Show current question
     if idx < len(questions):
         q = questions[idx]
         return render_template("quiz.html",
-            question={"question_text": q["question"], "options": q["choices"], "correct_answer": q["correct_answer"]},
+            question={"question_text": q["question"], "options": json.loads(q["choices"]), "correct_answer": q["correct_answer"]},
             username=session["username"],
             score=session["score"],
             generated_text=q["passage"],
@@ -434,6 +434,14 @@ def quiz():
 @app.route('/library')
 def library():
     return render_template('library.html')
+
+@app.route('/user_manual')
+def user_manual():
+    return render_template('user_manual.html')
+
+@app.route('/admin_manual')
+def admin_manual():
+    return render_template('admin_user_manual.html')
 
 @app.route('/save_book', methods=['POST'])
 def save_book():
