@@ -1058,12 +1058,24 @@ def dashboard():
         ORDER BY q.created_at DESC
     """, (user,))
     quizzes = cursor.fetchall()
+
+    # Calculate average score from user_progress
+    cursor.execute("""
+        SELECT correct_answers, total_questions
+        FROM user_progress
+        WHERE user_id = (SELECT user_id FROM users WHERE username = %s)
+    """, (user,))
+    progress = cursor.fetchall()
+    total_correct = sum(row["correct_answers"] for row in progress if row["total_questions"])
+    total_questions = sum(row["total_questions"] for row in progress if row["total_questions"])
+    if total_questions > 0:
+        average_score = round((total_correct / total_questions) * 100, 2)
+    else:
+        average_score = 0
+
+    quizzes_completed = len(quizzes)
     cursor.close()
     conn.close()
-
-    # You can also fetch quizzes_completed and average_score as before
-    quizzes_completed = len(quizzes)
-    average_score = 0  # Compute as needed
 
     return render_template("dashboard.html", quizzes=quizzes, quizzes_completed=quizzes_completed, average_score=average_score)
 
