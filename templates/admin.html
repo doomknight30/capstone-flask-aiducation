@@ -286,6 +286,7 @@
         <h2>Admin Panel</h2>
         <ul>
             <li><a href="#" onclick="showSection('dashboard')">Dashboard</a></li>
+            <li><a href="#" onclick="showSection('analytics-section')">Analytics</a></li>
             <li><a href="#" onclick="showSection('userList')">Manage Users</a></li>
             <li><a href="#" onclick="showSection('manageContent')">Manage Content</a></li>
             <li><a href="#" onclick="showSection('settings')">Settings</a></li>
@@ -338,6 +339,22 @@
                 <div id="announcementsList"></div>
             </div>
         </div>
+
+        <!-- Modern Analytics Panel -->
+        <div class = "analytics-section" id="analytics-section" style=" display: none; margin: 30px auto; max-width: 700px; background: rgba(255,255,255,0.08); border-radius: 16px; padding: 28px 28px 18px 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);">
+            <h3 style="font-size:2em; font-weight:600; margin-bottom:18px; letter-spacing:0.02em;">📊 Platform Analytics</h3>
+            <div id="analyticsCards" style="display: flex; gap: 24px; justify-content: space-between; flex-wrap: wrap; margin-bottom: 18px;">
+                <!-- Cards will be injected here -->
+            </div>
+            <div id="scoreChartContainer" style="margin: 18px 0 0 0;">
+                <canvas id="scoreChart" width="600" height="120"></canvas>
+            </div>
+            <div id="recentUsersPanel" style="margin-top: 18px;">
+                <h4 style="margin-bottom:8px; font-weight:500;">Recent Users</h4>
+                <div id="recentUsersList" style="display:flex; gap:18px; flex-wrap:wrap;"></div>
+            </div>
+        </div>
+
         <div class="user-list" id="userList">
             <h2>Manage Users</h2>
         
@@ -425,7 +442,7 @@
     <script>
         function showSection(section) {
             // Hide all sections
-            document.querySelectorAll('.dashboard-section, .questionsSection, .settings-section, .user-list').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.dashboard-section, .questionsSection, .settings-section, .user-list, .analytics-section').forEach(el => el.style.display = 'none');
             // Show the selected section
             var target = document.getElementById(section);
             if (target) {
@@ -437,6 +454,9 @@
                 // If showing the users section, fetch users
                 if (section === 'userList') {
                     fetchUsers();
+                }
+                if (section === "analytics-section"){
+                    fetchAnalytics();
                 }
             }
         }
@@ -755,6 +775,63 @@ function fetchAnnouncements() {
 
 // Fetch announcements on page load
 document.addEventListener("DOMContentLoaded", fetchAnnouncements);
+
+function fetchAnalytics() {
+    fetch('/admin_analytics')
+    .then(res => res.json())
+    .then(data => {
+        // Modern cards
+        let cardsHtml = `
+            <div style="flex:1; min-width:160px; background:rgba(255,255,255,0.13); border-radius:12px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; align-items:center; gap:14px;">
+                <span style="font-size:2.2em;">👥</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:500;">Total Users</div>
+                    <div style="font-size:2em; font-weight:700;">${data.total_users}</div>
+                </div>
+            </div>
+            <div style="flex:1; min-width:160px; background:rgba(255,255,255,0.13); border-radius:12px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; align-items:center; gap:14px;">
+                <span style="font-size:2.2em;">📝</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:500;">Total Quizzes</div>
+                    <div style="font-size:2em; font-weight:700;">${data.total_quizzes}</div>
+                </div>
+            </div>
+            <div style="flex:1; min-width:160px; background:rgba(255,255,255,0.13); border-radius:12px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; align-items:center; gap:14px;">
+                <span style="font-size:2.2em;">⭐</span>
+                <div>
+                    <div style="font-size:1.1em; font-weight:500;">Avg. Score</div>
+                    <div style="font-size:2em; font-weight:700;">${data.average_score}%</div>
+                </div>
+            </div>
+        `;
+        document.getElementById("analyticsCards").innerHTML = cardsHtml;
+
+        // Simple chart for average score (using Canvas API)
+        let ctx = document.getElementById('scoreChart').getContext('2d');
+        ctx.clearRect(0, 0, 600, 120);
+        // Draw background bar
+        ctx.fillStyle = "#2a7ae2";
+        ctx.fillRect(40, 60, 520, 24);
+        // Draw score bar
+        ctx.fillStyle = "#00bfa5";
+        ctx.fillRect(40, 60, 520 * (data.average_score/100), 24);
+        // Draw text
+        ctx.font = "bold 1.2em Poppins, sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(`Average Score: ${data.average_score}%`, 260, 52);
+
+        // Recent users as avatars/cards
+        let usersHtml = data.recent_users.map(u => `
+            <div style="background:rgba(255,255,255,0.13); border-radius:8px; padding:10px 18px; min-width:120px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+                <div style="font-size:1.7em;">👤</div>
+                <div style="font-weight:600;">${u.username}</div>
+                <div style="font-size:0.95em; color:#b2e0e0;">${u.created_at ? u.created_at.replace('T',' ').slice(0,16) : ''}</div>
+            </div>
+        `).join('');
+        document.getElementById("recentUsersList").innerHTML = usersHtml;
+    });
+}
+document.addEventListener("DOMContentLoaded", fetchAnalytics);
 
 </script>
 </body>
