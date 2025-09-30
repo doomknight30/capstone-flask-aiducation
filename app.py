@@ -833,6 +833,40 @@ def upload_document():
 def admin_dashboard():
     return render_template("admin.html")
 
+@app.route('/admin_analytics')
+def admin_analytics():
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # Total users
+    cursor.execute("SELECT COUNT(*) AS total_users FROM users")
+    total_users = cursor.fetchone()["total_users"]
+
+    # Total quizzes
+    cursor.execute("SELECT COUNT(*) AS total_quizzes FROM custom_quizzes")
+    total_quizzes = cursor.fetchone()["total_quizzes"]
+
+    # Average score (from user_progress)
+    cursor.execute("SELECT SUM(correct_answers) AS total_correct, SUM(total_questions) AS total_questions FROM user_progress")
+    row = cursor.fetchone()
+    if row["total_questions"]:
+        average_score = round((row["total_correct"] / row["total_questions"]) * 100, 2)
+    else:
+        average_score = 0
+
+    # Recent activity: last 5 users
+    cursor.execute("SELECT username, created_at FROM users ORDER BY created_at DESC LIMIT 5")
+    recent_users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return {
+        "total_users": total_users,
+        "total_quizzes": total_quizzes,
+        "average_score": average_score,
+        "recent_users": recent_users
+    }
+
 # Add announcement (admin only)
 @app.route('/add_announcement', methods=['POST'])
 def add_announcement():
