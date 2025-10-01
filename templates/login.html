@@ -54,9 +54,9 @@
             background: white;
             opacity: 0.3;
             clip-path: polygon(
-                50% 0%, 61% 35%, 98% 35%, 
-                68% 57%, 79% 91%, 50% 70%, 
-                21% 91%, 32% 57%, 2% 35%, 
+                50% 0%, 61% 35%, 98% 35%,
+                68% 57%, 79% 91%, 50% 70%,
+                21% 91%, 32% 57%, 2% 35%,
                 39% 35%
             );
             animation: twinkle 3s infinite alternate ease-in-out;
@@ -190,7 +190,7 @@
         }
         .login-btn {
             display: inline-block;     /* makes <a> behave like a button */
-            width: 80%;     
+            width: 80%;
             background: #0063af;
             color: #fff;
             margin-top: 5px;
@@ -205,7 +205,7 @@
         }
         .google-btn {
             display: inline-block;     /* makes <a> behave like a button */
-            width: 80%;     
+            width: 80%;
             background: white;
             color: black;
             margin-top: 5px;
@@ -252,9 +252,9 @@
             height: 20px;
             margin-right: 10px;
         }
-        
+
         h1 {
-        font-size: 1.5em; 
+        font-size: 1.5em;
         margin-top: 0px;
         }
 
@@ -292,7 +292,7 @@
         container.appendChild(star);
     }
     </script>
-    
+
     <!-- Main Content -->
     <div class="main-content">
         <div class="info-box">
@@ -332,7 +332,7 @@
 
         <script>
             const lines = [
-                "AI-ducation brings you an interactive learning experience with engaging activities. Choose to login or play as a guest!",
+                "AI-ducation brings you an interactive learning experience with engaging activities.",
                 "Discover fun and knowledge combined – learning has never been this exciting!",
                 "Play, learn, and explore new ideas while enjoying every step of the journey."
             ];
@@ -376,11 +376,11 @@
                 <input type="password" name = "password" placeholder="Enter your password" required>
                 <button type="submit" class="login-btn" name = "mode" value = "registered">Login & Play</button>
                 <br><a href="{{ url_for('google.login') }}" class="google-btn">Login with Google</a>
-                
+
             </form>
             <!-- Social Login -->
             <div class="social-login">
-                
+
                 <a href="{{ url_for('register') }}">
                     Don't Have an Account? Click Here!
                 </a>

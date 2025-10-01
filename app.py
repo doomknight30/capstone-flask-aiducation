@@ -36,13 +36,13 @@ def gemini_complete(messages, model_name="gemini-2.5-flash"):
                 prompt += f"User: {message['content']}\n"
             elif message["role"] == "assistant":
                 prompt += f"Assistant: {message['content']}\n"
-        
+
         # Generate content using Gemini
         response = model.generate_content(prompt)
         result = response.text.strip()
         print(f"Gemini API response: {result[:200]}...")  # Log first 200 chars for debugging
         return result
-        
+
     except Exception as e:
         print(f"Gemini API error: {e}")
         # Fallback to simple response
@@ -157,14 +157,14 @@ def home():
         password = request.form.get("password")
 
         mode = request.form.get("mode")  # "registered" or "guest"
-        
+
         if mode == "registered":
             conn = connect_db()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
             conn.close()
-            
+
             if user and check_password_hash(user['password'], password):
                 session["username"] = username
                 session["guest"] = False
@@ -479,7 +479,7 @@ def account_settings():
         return redirect(url_for('home'))
 
     username = session['username']
-    
+
     db = connect_db()
     cursor = db.cursor(dictionary=True)
 
@@ -521,20 +521,20 @@ def account_settings():
 def create_child_account():
     if 'username' not in session:
         return redirect(url_for('home'))
-    
+
     username = session['username']
-    
+
     # Check if user has parent role
     db = connect_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT user_id, role FROM users WHERE username = %s", (username,))
     user = cursor.fetchone()
-    
+
     if not user or user['role'] != 'parent':
         cursor.close()
         db.close()
         return redirect(url_for('home'))
-    
+
     if request.method == 'POST':
         child_username = request.form['child_username']
         child_password = request.form['child_password']
@@ -543,18 +543,18 @@ def create_child_account():
         child_birthdate = request.form['child_birthdate']
         child_year_level = request.form['child_year_level']
         child_school = request.form.get("child_school")
-        
+
         # Check if child username already exists
         cursor.execute("SELECT * FROM users WHERE username = %s", (child_username,))
         existing_child = cursor.fetchone()
-        
+
         if existing_child:
             cursor.close()
             db.close()
-            return render_template('account.html', 
-                                user={'username': username, 'role': 'parent'}, 
+            return render_template('account.html',
+                                user={'username': username, 'role': 'parent'},
                                 message="Child username already taken!")
-        
+
         try:
             # Create kid user account
             hashed_password = generate_password_hash(child_password)
@@ -562,32 +562,32 @@ def create_child_account():
                 INSERT INTO users (username, password, role, first_name, last_name, birthdate)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (child_username, hashed_password, 's.child', child_first_name, child_last_name, child_birthdate))
-            
+
             child_user_id = cursor.lastrowid
-            
+
             # Create child info record
             cursor.execute("""
                 INSERT INTO child_info (user_id, first_name, last_name, birthdate, year_level, school)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """, (child_user_id, child_first_name, child_last_name, child_birthdate, child_year_level, child_school))
-            
+
             db.commit()
-            
+
             cursor.close()
             db.close()
-            
-            return render_template('account.html', 
-                                user={'username': username, 'role': 'parent'}, 
+
+            return render_template('account.html',
+                                user={'username': username, 'role': 'parent'},
                                 message="Child account created successfully!")
-            
+
         except Exception as e:
             db.rollback()
             cursor.close()
             db.close()
-            return render_template('account.html', 
-                                user={'username': username, 'role': 'parent'}, 
+            return render_template('account.html',
+                                user={'username': username, 'role': 'parent'},
                                 message=f"Error creating child account: {str(e)}")
-    
+
     cursor.close()
     db.close()
     return redirect(url_for('account_settings'))
@@ -608,7 +608,7 @@ def result():
 
     # Get user_id based on username
     user_id = get_user_id(username, cursor)
-    
+
     if user_id:
         cursor.execute(
             """
@@ -716,9 +716,9 @@ def generate_multiple_choice_question(text):
         {"role": "user", "content": f"Based on the following text, create the MCQ.\n\n{text}"},
     ]
     generated_text = gemini_complete(messages)
-    
+
     print(f"Raw API response for MCQ: {generated_text[:200]}...")  # Debug logging
-    
+
     try:
         # First try to parse directly as JSON
         mcq = json.loads(generated_text)
@@ -744,12 +744,12 @@ def generate_multiple_choice_question(text):
                 "choices": [
                     "A general topic",
                     "The specific subject mentioned",
-                    "Something unrelated", 
+                    "Something unrelated",
                     "Not enough information"
                 ],
                 "correct_answer": "The specific subject mentioned"
             }
-    
+
     # Validate the MCQ structure
     if not mcq.get("question") or not mcq.get("choices") or not mcq.get("correct_answer"):
         print(f"Invalid MCQ structure: {mcq}")
@@ -758,17 +758,17 @@ def generate_multiple_choice_question(text):
             "choices": ["Option A", "Option B", "Option C", "Option D"],
             "correct_answer": "Option A"
         }
-    
+
     return mcq
 
 @app.route('/generate_quiz_text', methods=['POST'])
 def generate_quiz_text():
     data = request.json
     topic = data.get('topic')
-    
+
     if not topic:
         return jsonify({"error": "Topic is required"}), 400
-    
+
     try:
         generated_text = generate_reading_comprehension_text(topic)
         mcq = generate_multiple_choice_question(generated_text)
@@ -973,6 +973,8 @@ def get_users():
 
     return jsonify(user_list)
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 @app.route('/add_user', methods=['POST'])
 def add_user():
     data = request.json
@@ -985,16 +987,20 @@ def add_user():
     if not username or not password or not role or not email or not birthdate:
         return jsonify({"error": "All fields are required"}), 400
 
+    # Hash the password before saving
+    hashed_password = generate_password_hash(password)
+
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO users (username, password, role, email, birthdate) 
+        INSERT INTO users (username, password, role, email, birthdate)
         VALUES (%s, %s, %s, %s, %s)
-    """, (username, password, role, email, birthdate))
+    """, (username, hashed_password, role, email, birthdate))
     conn.commit()
     conn.close()
 
     return jsonify({"message": "User added successfully"}), 201
+
 
 @app.route('/edit_user/<int:user_id>', methods=['PUT'])
 def edit_user(user_id):
@@ -1007,17 +1013,28 @@ def edit_user(user_id):
         role = data.get("role")
         email = data.get("email")
         birthdate = data.get("birthdate")
+        password = data.get("password")  # optional, only if updating
 
         if not username or not role or not email or not birthdate:
             return jsonify({"error": "All fields are required"}), 400
 
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE users 
-            SET username = %s, role = %s, email = %s, birthdate = %s 
-            WHERE user_id = %s
-        """, (username, role, email, birthdate, user_id))
+
+        if password:
+            hashed_password = generate_password_hash(password)
+            cursor.execute("""
+                UPDATE users
+                SET username = %s, role = %s, email = %s, birthdate = %s, password = %s
+                WHERE user_id = %s
+            """, (username, role, email, birthdate, hashed_password, user_id))
+        else:
+            cursor.execute("""
+                UPDATE users
+                SET username = %s, role = %s, email = %s, birthdate = %s
+                WHERE user_id = %s
+            """, (username, role, email, birthdate, user_id))
+
         conn.commit()
         conn.close()
 
@@ -1025,6 +1042,7 @@ def edit_user(user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/delete_user/<int:user_id>', methods=['DELETE'])
@@ -1049,8 +1067,8 @@ def get_questions():
 
     # Fetch from custom_quiz_questions and join with custom_quizzes to get creator
     cursor.execute("""
-        SELECT 
-            q.question_id, q.quiz_id, q.question_number, q.passage, q.question, q.choices, q.correct_answer, 
+        SELECT
+            q.question_id, q.quiz_id, q.question_number, q.passage, q.question, q.choices, q.correct_answer,
             'custom_quiz' AS source,
             cq.creator_username AS creator
         FROM custom_quiz_questions q
@@ -1060,8 +1078,8 @@ def get_questions():
 
     # Fetch from group_exam_questions and join with group_exams to get host (creator)
     cursor.execute("""
-        SELECT 
-            q.id AS question_id, q.group_id, q.question_number, q.passage, q.question, q.choices, q.correct_answer, 
+        SELECT
+            q.id AS question_id, q.group_id, q.question_number, q.passage, q.question, q.choices, q.correct_answer,
             'group_exam' AS source,
             ge.host_username AS creator
         FROM group_exam_questions q
@@ -1152,7 +1170,7 @@ def set_generated_question():
     session["generated_question"] = question_text
     session["generated_choices"] = choices
     session["correct_answer"] = correct_answer
-    
+
     if use_custom_source and generated_text:
         session["custom_quiz_active"] = True
         session["quiz_source_type"] = "uploaded_file"
@@ -1172,7 +1190,7 @@ def set_generated_question():
         # Clear uploaded file quiz state
         session.pop("custom_quiz_active", None)
         session.pop("source_text", None)
-    
+
     # Always store the current generated text for display
     if generated_text:
         session["generated_text"] = generated_text
@@ -1186,15 +1204,15 @@ def select_relevant_excerpt_with_variety(full_text, used_excerpts=None):
     """
     if used_excerpts is None:
         used_excerpts = []
-    
+
     # Create a prompt that encourages variety
     variety_instruction = ""
     if used_excerpts:
         variety_instruction = f"\n\nPreviously used excerpts to AVOID repeating:\n" + "\n".join([f"- {excerpt[:100]}..." for excerpt in used_excerpts[-3:]])  # Show last 3 to avoid
-    
+
     messages = [
         {
-            "role": "system", 
+            "role": "system",
             "content": f"From the provided text, return only a short self-contained excerpt (2-4 sentences) that is DIFFERENT from any previously used excerpts. Focus on a different aspect, topic, or section of the document. No explanations.{variety_instruction}"
         },
         {"role": "user", "content": f"Select a NEW and DIFFERENT excerpt from this text:\n\n{full_text}"},
@@ -1207,7 +1225,7 @@ def generate_varied_reading_comprehension_text(topic, question_number=1, previou
     """
     if previous_passages is None:
         previous_passages = []
-    
+
     # Create different aspects/angles for the same topic
     aspects = [
         f"basic introduction to {topic}",
@@ -1219,19 +1237,19 @@ def generate_varied_reading_comprehension_text(topic, question_number=1, previou
         f"recent discoveries or developments about {topic}",
         f"practical applications of {topic}"
     ]
-    
+
     # Select a different aspect based on question number
     aspect_index = (question_number - 1) % len(aspects)
     chosen_aspect = aspects[aspect_index]
-    
+
     # Add instruction to avoid repetition if we have previous passages
     variety_instruction = ""
     if previous_passages:
         variety_instruction = f"\n\nPreviously covered content to AVOID repeating:\n" + "\n".join([f"- {passage[:80]}..." for passage in previous_passages[-2:]])
-    
+
     messages = [
         {
-            "role": "system", 
+            "role": "system",
             "content": f"You write short, simple passages for reading comprehension. Focus on {chosen_aspect}. Make each passage unique and different from previous ones. Respond with only the passage text (2-4 sentences).{variety_instruction}"
         },
         {"role": "user", "content": f"Write a short, concise passage focusing on {chosen_aspect}."},
@@ -1253,21 +1271,21 @@ def generate_multiple_choice_question_with_context(text, question_number=1):
         "characteristic or feature",
         "location or setting"
     ]
-    
+
     question_type = question_types[(question_number - 1) % len(question_types)]
-    
+
     messages = [
         {
-            "role": "system", 
+            "role": "system",
             "content": f"Create one MCQ focusing on {question_type} from a passage. Respond with ONLY valid JSON: {{\"question\": string, \"choices\": [string,string,string,string], \"correct_answer\": string}}. Make the question and all choices clearly distinct and avoid generic options."
         },
         {"role": "user", "content": f"Based on the following text, create an MCQ about {question_type}:\n\n{text}"},
     ]
-    
+
     generated_text = gemini_complete(messages)
-    
+
     print(f"Raw API response for MCQ (Question #{question_number}): {generated_text[:200]}...")
-    
+
     try:
         mcq = json.loads(generated_text)
     except json.JSONDecodeError:
@@ -1290,18 +1308,18 @@ def generate_multiple_choice_question_with_context(text, question_number=1):
                 f"What characteristic is highlighted in the text?"
             ]
             fallback_question = fallback_questions[(question_number - 1) % len(fallback_questions)]
-            
+
             mcq = {
                 "question": fallback_question,
                 "choices": [
                     "First possible answer",
-                    "Second possible answer", 
+                    "Second possible answer",
                     "Third possible answer",
                     "Fourth possible answer"
                 ],
                 "correct_answer": "First possible answer"
             }
-    
+
     # Validate the MCQ structure
     if not mcq.get("question") or not mcq.get("choices") or not mcq.get("correct_answer"):
         print(f"Invalid MCQ structure: {mcq}")
@@ -1361,17 +1379,17 @@ def submit_answer_and_generate_new():
     # Generate new content with variety
     try:
         quiz_source_type = session.get("quiz_source_type")
-        
+
         if quiz_source_type == "uploaded_file" and session.get("full_document_text"):
             # Pick a NEW excerpt from the full document each time
             full_text = session.get("full_document_text")
             used_excerpts = session.get("passage_history", [])
-            
+
             # Try multiple times to get a different excerpt
             max_attempts = 3
             for attempt in range(max_attempts):
                 excerpt = select_relevant_excerpt_with_variety(full_text, used_excerpts)
-                
+
                 # Check if this excerpt is significantly different from previous ones
                 is_different = True
                 for used_excerpt in used_excerpts[-2:]:  # Check last 2
@@ -1382,10 +1400,10 @@ def submit_answer_and_generate_new():
                         if len(excerpt_words & used_words) / max(len(excerpt_words), 1) > 0.7:
                             is_different = False
                             break
-                
+
                 if is_different or attempt == max_attempts - 1:
                     break
-            
+
             mcq = generate_multiple_choice_question_with_context(excerpt, current_question_number)
 
             # Update session with new content
@@ -1413,18 +1431,18 @@ def submit_answer_and_generate_new():
             # For topic-based quizzes, generate varied content
             current_topic = session.get("current_topic")
             previous_passages = session.get("passage_history", [])
-            
+
             generated_text = generate_varied_reading_comprehension_text(
                 current_topic, current_question_number, previous_passages
             )
             mcq = generate_multiple_choice_question_with_context(generated_text, current_question_number)
-            
+
             # Update session with new content
             session["generated_text"] = generated_text
             session["generated_question"] = mcq.get("question")
             session["generated_choices"] = mcq.get("choices")
             session["correct_answer"] = mcq.get("correct_answer")
-            
+
             new_content = {
                 "generated_text": generated_text,
                 "question": mcq.get("question"),
@@ -1432,24 +1450,24 @@ def submit_answer_and_generate_new():
                 "correct_answer": mcq.get("correct_answer"),
                 "topic": current_topic
             }
-            
+
             return jsonify({
                 "score": session["score"],
                 "quiz_finished": False,
                 "new_content": new_content,
                 "use_custom_source": False
             })
-            
+
         else:
             # Fallback with variety
             fallback_topic = "general knowledge"
             previous_passages = session.get("passage_history", [])
-            
+
             generated_text = generate_varied_reading_comprehension_text(
                 fallback_topic, current_question_number, previous_passages
             )
             mcq = generate_multiple_choice_question_with_context(generated_text, current_question_number)
-            
+
             # Update session with new content
             session["generated_text"] = generated_text
             session["generated_question"] = mcq.get("question")
@@ -1457,7 +1475,7 @@ def submit_answer_and_generate_new():
             session["correct_answer"] = mcq.get("correct_answer")
             session["current_topic"] = fallback_topic
             session["quiz_source_type"] = "prompt_topic"
-            
+
             new_content = {
                 "generated_text": generated_text,
                 "question": mcq.get("question"),
@@ -1465,14 +1483,14 @@ def submit_answer_and_generate_new():
                 "correct_answer": mcq.get("correct_answer"),
                 "topic": fallback_topic
             }
-            
+
             return jsonify({
                 "score": session["score"],
                 "quiz_finished": False,
                 "new_content": new_content,
                 "use_custom_source": False
             })
-            
+
     except Exception as e:
         print(f"Error generating new content: {str(e)}")
         return jsonify({"error": f"Failed to generate new content: {str(e)}"}), 500
@@ -1763,7 +1781,7 @@ def oauth_success():
     """Handle successful OAuth login"""
     if not google.authorized:
         return redirect(url_for("home"))
-    
+
     try:
         # Get user info from Google
         resp = google.get("/oauth2/v2/userinfo")
@@ -1773,11 +1791,11 @@ def oauth_success():
 
         user_info = resp.json()
         print(f"User info received: {user_info}")
-        
+
         email = user_info.get("email")
         name = user_info.get("name", "")
         given_name = user_info.get("given_name", "")
-        
+
         if not email:
             print("No email found in user info")
             return redirect(url_for("home"))
@@ -1785,7 +1803,7 @@ def oauth_success():
         # Database operations
         db = connect_db()
         cursor = db.cursor(dictionary=True)
-        
+
         try:
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -1796,12 +1814,12 @@ def oauth_success():
                 cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
                 if cursor.fetchone():
                     username = f"{username}_{random.randint(1000, 9999)}"
-                
+
                 cursor.execute("""
                     INSERT INTO users (username, email, role, first_name, password)
                     VALUES (%s, %s, %s, %s, %s)
                 """, (username, email, "student", given_name or name, "oauth_google"))
-                
+
                 db.commit()
                 session_username = username
                 role = "student"
@@ -1816,9 +1834,9 @@ def oauth_success():
             session["score"] = 0
             session["question_count"] = 0
             session["user_id"] = user["user_id"] if user else cursor.lastrowid
-            
+
             print(f"User logged in: {session_username}")
-            
+
         except Exception as db_error:
             print(f"Database error: {db_error}")
             db.rollback()
@@ -1826,9 +1844,9 @@ def oauth_success():
         finally:
             cursor.close()
             db.close()
-            
+
         return redirect(url_for("homepage"))
-        
+
     except Exception as e:
         print(f"OAuth error: {e}")
         return redirect(url_for("home"))
@@ -1911,7 +1929,7 @@ def add_group_exam_time():
     cursor.close()
     db.close()
     return jsonify(success=True, remaining_time=new_time_limit * 60)
-    
+
 
 @app.route('/records')
 def records():

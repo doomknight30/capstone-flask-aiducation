@@ -55,9 +55,9 @@
         background: white;
         opacity: 0.3;
         clip-path: polygon(
-            50% 0%, 61% 35%, 98% 35%, 
-            68% 57%, 79% 91%, 50% 70%, 
-            21% 91%, 32% 57%, 2% 35%, 
+            50% 0%, 61% 35%, 98% 35%,
+            68% 57%, 79% 91%, 50% 70%,
+            21% 91%, 32% 57%, 2% 35%,
             39% 35%
         );
         animation: twinkle 3s infinite alternate ease-in-out;
@@ -84,7 +84,7 @@
             padding: 20px;
             position: fixed;
             height: 73.3%;              /* slightly shorter so it doesn't touch top/bottom */
-            top: 6%;                  /* push down */
+            top: 20%;                  /* push down */
             left: 20px;               /* move a bit to the right */
             border-radius: 15px;      /* rounded edges */
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* optional for depth */
@@ -279,9 +279,92 @@
             box-shadow: 0 2px 4px rgba(0, 121, 107, 0.6);
             transform: translateY(0);
         }
+        /* Header */
+        .header {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .header .logo {
+            font-size: 40px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #ffffff; /* cursor effect */
+            width: 0; /* start hidden */
+            display: inline-block;
+            position: relative;
+            margin-left: 20px; /* pushes it to the right */
+
+            /* typing effect */
+            animation: typing 4s steps(12, end) forwards,
+                    blink 0.6s step-end infinite;
+        }
+        /* typing animation */
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 12ch; } /* "AI-ducation" = 12 characters */
+        }
+
+        /* blinking cursor */
+        @keyframes blink {
+            70% { border-color: transparent; }
+        }
+
+        .header .logo::after {
+            content: "📖"; /* open book */
+            color: #ffffff; /* white */
+            font-size: 1.1em; /* bigger than before */
+            opacity: 0;
+            margin-left: 1px; /* a little more spacing */
+            display: inline-block;
+            animation: bookAppear 1s ease forwards;
+            animation-delay: 4s; /* after typing */
+            transform: translateY(-4px); /* shift upward */
+        }
+
+        /* book fade & slide in */
+        @keyframes bookAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-4px) scale(1); /* keep upward shift */
+            }
+        }
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 15px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">AI-ducation</div>
+        <div class="nav-links">
+            <a href="{{ url_for('homepage') }}">Home</a>
+            <a href="{{ url_for('user_manual')}}" target="_blank">User Manual</a>
+            <a href="#">Contact</a>
+            <a href="{{ url_for('logout') }}">LogOut</a>
+        </div>
+    </div>
     <div class="sidebar">
         <h2>Admin Panel</h2>
         <ul>
@@ -357,7 +440,7 @@
 
         <div class="user-list" id="userList">
             <h2>Manage Users</h2>
-        
+
             <h3>Add User</h3>
             <input type="text" id="newUsername" placeholder="Username">
             <input type="password" id="newPassword" placeholder="Password">
@@ -365,7 +448,7 @@
             <input type="email" id="newEmail" placeholder="Email">
             <input type="date" id="newBirthdate">
             <button onclick="addUser()">Add User</button>
-        
+
             <h3>User List</h3>
             <table id="usersTable">
                 <thead>
@@ -406,7 +489,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div class="questionsSection" id="manageContent" style="display: none;">
             <h2>Manage Questions</h2>
 
@@ -431,7 +514,7 @@
                 <tbody></tbody>
             </table>
         </div>
-        
+
         <div class="settings-section" id="settings">
             <h2>Settings</h2>
             <h3>Change Admin Password</h3>

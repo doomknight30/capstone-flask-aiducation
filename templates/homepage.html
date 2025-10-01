@@ -54,9 +54,9 @@
             background: white;
             opacity: 0.3;
             clip-path: polygon(
-                50% 0%, 61% 35%, 98% 35%, 
-                68% 57%, 79% 91%, 50% 70%, 
-                21% 91%, 32% 57%, 2% 35%, 
+                50% 0%, 61% 35%, 98% 35%,
+                68% 57%, 79% 91%, 50% 70%,
+                21% 91%, 32% 57%, 2% 35%,
                 39% 35%
             );
             animation: twinkle 3s infinite alternate ease-in-out;
@@ -251,7 +251,7 @@
             /*max-width: 850px;*/
             max-height: 450px;
             margin-top: -80px;
-            overflow-y: auto;  
+            overflow-y: auto;
             border-radius: 12px; /* round edges of the sidebar itself */
             left: 200px;
 
@@ -365,7 +365,7 @@
             <div class="welcome-panel">
                 <h2>Welcome, {{ first_name }}!</h2>
                 <p>Welcome to AI-ducation! Your personalized learning journey starts here. Use the sidebar to navigate through different features and start exploring.</p>
-                <button class="btn quiz-btn" onclick="location.href='{{ url_for('user_manual') }}'" target="_blank">Get Started</button>
+                <button class="btn quiz-btn" onclick="window.open('{{ url_for('user_manual') }}', '_blank')">Get Started</button>
             </div>
         {% else %}
             <div class="welcome-panel">
