@@ -390,7 +390,11 @@
                     <label style="display:block; margin-bottom:8px;">Username</label>
                     <input type="text" id="editUsername" style="margin-bottom:12px;">
                     <label style="display:block; margin-bottom:8px;">Role</label>
-                    <input type="text" id="editRole" style="margin-bottom:12px;">
+                    <select name="text" id="editRole" style="margin-bottom:12px;">
+                        <option value="admin">Admin</option>
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                    </select>
                     <label style="display:block; margin-bottom:8px;">Email</label>
                     <input type="email" id="editEmail" style="margin-bottom:12px;">
                     <label style="display:block; margin-bottom:8px;">Birthdate</label>
@@ -580,37 +584,42 @@ document.getElementById("editUserForm").onsubmit = function(e) {
     const newEmail = document.getElementById("editEmail").value;
     const newBirthdate = document.getElementById("editBirthdate").value;
 
-    if (newUsername && newRole && newEmail && newBirthdate) {
-        fetch(`/edit_user/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                username: newUsername,
-                role: newRole,
-                email: newEmail,
-                birthdate: newBirthdate
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.error); });
-            }
-            return response.json();
-        })
-        .then(data => {
-            alert(data.message);
-            closeEditUserModal();
-            fetchUsers();
-        })
-        .catch(error => {
-            console.error('Error editing user:', error);
-            alert("Error: " + error.message);
-        });
-    }
-};
+    // Optional: Disable save button while saving
+    const saveBtn = document.querySelector("#editUserForm button[type='submit']");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
 
+    fetch(`/edit_user/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            username: newUsername,
+            role: newRole,
+            email: newEmail,
+            birthdate: newBirthdate
+        })
+    })
+    .then(response => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message);
+        closeEditUserModal();
+        fetchUsers();
+    })
+    .catch(error => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+        alert("Error: " + error.message);
+    });
+}
 function closeEditUserModal() {
     document.getElementById("editUserModal").style.display = "none";
 }
