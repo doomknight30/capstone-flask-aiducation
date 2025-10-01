@@ -381,6 +381,27 @@
                 <tbody></tbody>
             </table>
         </div>
+
+        <div id="editUserModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:#283949; padding:32px 28px 22px 28px; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.22); max-width:340px; width:90%; margin:auto; position:relative;">
+                <h2 style="margin-bottom:18px;">Edit User</h2>
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <label style="display:block; margin-bottom:8px;">Username</label>
+                    <input type="text" id="editUsername" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:8px;">Role</label>
+                    <input type="text" id="editRole" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:8px;">Email</label>
+                    <input type="email" id="editEmail" style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:8px;">Birthdate</label>
+                    <input type="date" id="editBirthdate" style="margin-bottom:18px;">
+                    <div style="display:flex; gap:12px; justify-content:flex-end;">
+                        <button type="button" onclick="closeEditUserModal()" style="background:#888;">Cancel</button>
+                        <button type="submit">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         
         <div class="questionsSection" id="manageContent" style="display: none;">
             <h2>Manage Questions</h2>
@@ -539,10 +560,25 @@ function addUser() {
 }
 
 function editUser(id) {
-    let newUsername = prompt("Enter new username:", document.querySelector(`#user-${id} td:nth-child(2)`).innerText);
-    let newRole = prompt("Enter new role (admin/user):", document.querySelector(`#user-${id} td:nth-child(3)`).innerText);
-    let newEmail = prompt("Enter new email:", document.querySelector(`#user-${id} td:nth-child(4)`).innerText);
-    let newBirthdate = prompt("Enter new birthdate:", document.querySelector(`#user-${id} td:nth-child(5)`).innerText);
+    // Get current values from the table row
+    const row = document.querySelector(`#user-${id}`);
+    document.getElementById("editUserId").value = id;
+    document.getElementById("editUsername").value = row.children[1].innerText;
+    document.getElementById("editRole").value = row.children[2].innerText;
+    document.getElementById("editEmail").value = row.children[3].innerText;
+    document.getElementById("editBirthdate").value = row.children[4].innerText;
+
+    document.getElementById("editUserModal").style.display = "flex";
+}
+
+// Handle modal form submit
+document.getElementById("editUserForm").onsubmit = function(e) {
+    e.preventDefault();
+    const id = document.getElementById("editUserId").value;
+    const newUsername = document.getElementById("editUsername").value;
+    const newRole = document.getElementById("editRole").value;
+    const newEmail = document.getElementById("editEmail").value;
+    const newBirthdate = document.getElementById("editBirthdate").value;
 
     if (newUsername && newRole && newEmail && newBirthdate) {
         fetch(`/edit_user/${id}`, {
@@ -565,6 +601,7 @@ function editUser(id) {
         })
         .then(data => {
             alert(data.message);
+            closeEditUserModal();
             fetchUsers();
         })
         .catch(error => {
@@ -572,6 +609,10 @@ function editUser(id) {
             alert("Error: " + error.message);
         });
     }
+};
+
+function closeEditUserModal() {
+    document.getElementById("editUserModal").style.display = "none";
 }
 
 
