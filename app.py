@@ -26,7 +26,7 @@ genai.configure(api_key=os.environ.get("GOOGLE_GENAI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 def login_required(f):
-    @wraps
+    @wraps(f)
     def decorated_function(*args, **kwargs):
         if "username" not in session:
             return redirect(url_for("home"))
