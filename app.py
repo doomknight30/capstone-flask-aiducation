@@ -12,6 +12,7 @@ from flask_dance.contrib.google import make_google_blueprint, google
 from flask import Flask
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from functools import wraps
 import re
 
 load_dotenv()
@@ -23,6 +24,14 @@ group_rooms = {}
 # Google Generative AI configuration
 genai.configure(api_key=os.environ.get("GOOGLE_GENAI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
+
+def login_required(f):
+    @wraps
+    def decorated_function(*args, **kwargs):
+        if "username" not in session:
+            return redirect(url_for("home"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def gemini_complete(messages, model_name="gemini-2.5-flash"):
     """Call Google Gemini API and return the assistant message text."""
@@ -186,6 +195,7 @@ def home():
     return render_template("login.html", error=error)
 
 @app.route("/quiz_customization", methods=["GET"])
+@login_required
 def quiz_customization():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -232,6 +242,7 @@ def get_book_text_from_db(book_id, user_id):
     return fetch_book_text(book["read_link"])
 
 @app.route("/start_quiz_custom", methods=["POST"])
+@login_required
 def start_quiz_custom():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -361,6 +372,7 @@ def start_quiz_custom():
     return redirect(url_for("quiz"))
 
 @app.route("/quiz", methods=["GET", "POST"])
+@login_required
 def quiz():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -432,18 +444,22 @@ def quiz():
         return redirect(url_for("result"))
 
 @app.route('/library')
+@login_required
 def library():
     return render_template('library.html')
 
 @app.route('/user_manual')
+@login_required
 def user_manual():
     return render_template('user_manual.html')
 
 @app.route('/admin_manual')
+@login_required
 def admin_manual():
     return render_template('admin_user_manual.html')
 
 @app.route('/save_book', methods=['POST'])
+@login_required
 def save_book():
     data = request.json
     title = data.get('title')
@@ -463,6 +479,7 @@ def save_book():
     return jsonify({"status": "success"})
 
 @app.route('/get_selected_books')
+@login_required
 def get_selected_books():
     user_id = session.get('user_id')
     conn = connect_db()
@@ -474,6 +491,7 @@ def get_selected_books():
     return jsonify(books)
 
 @app.route('/account', methods=['GET', 'POST'])
+@login_required
 def account_settings():
     if 'username' not in session:
         return redirect(url_for('home'))
@@ -518,6 +536,7 @@ def account_settings():
     return render_template('account.html', user=user)
 
 @app.route('/create_child_account', methods=['POST'])
+@login_required
 def create_child_account():
     if 'username' not in session:
         return redirect(url_for('home'))
@@ -593,6 +612,7 @@ def create_child_account():
     return redirect(url_for('account_settings'))
 
 @app.route("/result")
+@login_required
 def result():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -636,6 +656,7 @@ def result():
     return render_template("result.html", total_questions=total_questions, correct_answers=correct_answers, username = username)
 
 @app.route("/homepage")
+@login_required
 def homepage():
     username = session.get("username")
     role = session.get("role")
@@ -762,6 +783,7 @@ def generate_multiple_choice_question(text):
     return mcq
 
 @app.route('/generate_quiz_text', methods=['POST'])
+@login_required
 def generate_quiz_text():
     data = request.json
     topic = data.get('topic')
@@ -834,6 +856,7 @@ def admin_dashboard():
     return render_template("admin.html")
 
 @app.route('/admin_analytics')
+@admin_required
 def admin_analytics():
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
@@ -869,6 +892,7 @@ def admin_analytics():
 
 # Add announcement (admin only)
 @app.route('/add_announcement', methods=['POST'])
+@admin_required
 def add_announcement():
     if session.get("role") != "admin":
         return jsonify({"error": "Unauthorized"}), 403
@@ -899,6 +923,7 @@ def get_announcements():
     return jsonify(announcements)
 
 @app.route("/group_exam")
+@login_required
 def group_exam():
     if 'username' not in session:
         return redirect(url_for('home'))
@@ -1095,6 +1120,7 @@ def get_questions():
     return jsonify(all_questions)
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -1496,6 +1522,7 @@ def submit_answer_and_generate_new():
         return jsonify({"error": f"Failed to generate new content: {str(e)}"}), 500
 
 @app.route('/start_quiz')
+@login_required
 def start_quiz():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -1517,6 +1544,7 @@ def start_quiz():
     return redirect(url_for("quiz"))
 
 @app.route("/start_group_exam", methods=["POST"])
+@login_required
 def start_group_exam():
     group_id = request.form.get("group_id")
     quiz_format = request.form.get("format")
@@ -1580,6 +1608,7 @@ def start_group_exam():
     return redirect(url_for("group_room"))
 
 @app.route('/join_group_exam', methods=['POST'])
+@login_required
 def join_group_exam():
     group_id = request.form.get('group_id')
     username = session.get('username')
@@ -1609,6 +1638,7 @@ def join_group_exam():
         return render_template('homepage.html', error="Group ID not found.", first_name=session.get('first_name'), role=session.get('role'))
 
 @app.route('/group_exam_take', methods=['GET', 'POST'])
+@login_required
 def group_exam_take():
     if "username" not in session or "group_id" not in session:
         return redirect(url_for("home"))
@@ -1716,6 +1746,7 @@ def group_exam_take():
         )
 
 @app.route("/group_room")
+@login_required
 def group_room():
     if "username" not in session:
         return redirect(url_for("home"))
@@ -1932,6 +1963,7 @@ def add_group_exam_time():
 
 
 @app.route('/records')
+@login_required
 def records():
     if session.get('role') != 'teacher':
         return redirect(url_for('homepage'))
