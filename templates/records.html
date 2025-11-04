@@ -98,6 +98,65 @@
             .examinee-table th, .examinee-table td { padding: 6px; font-size: 0.95rem; }
             .search-bar input { width: 95%; }
         }
+
+        .questions-section {
+        margin-top: 15px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .questions-toggle {
+        background: #3b82f6;
+        color: white;
+        padding: 10px;
+        cursor: pointer;
+        width: 100%;
+        border: none;
+        text-align: left;
+        font-size: 0.9rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .questions-toggle:hover {
+        background: #2563eb;
+    }
+    
+    .questions-content {
+        display: none;
+        padding: 15px;
+    }
+    
+    .question-item {
+        background: rgba(255,255,255,0.05);
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+    }
+    
+    .question-text {
+        color: #fff;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .choices-list {
+        list-style: none;
+        padding-left: 20px;
+    }
+    
+    .choice-item {
+        color: #b3e5fc;
+        margin: 5px 0;
+    }
+    
+    .correct-answer {
+        color: #4ade80;
+        margin-top: 8px;
+        font-weight: 500;
+    }
     </style>
 </head>
 <body>
@@ -124,6 +183,29 @@
                         Date: <b>{{ exam.created_at.strftime('%Y-%m-%d %H:%M') if exam.created_at else 'N/A' }}</b>
                     </div>
                     <div class="source-content">{{ exam.source_content[:300] }}{% if exam.source_content and exam.source_content|length > 300 %}...{% endif %}</div>
+                    <div class="questions-section">
+        <button class="questions-toggle" onclick="toggleQuestions(this)">
+            View Questions
+            <span class="toggle-icon">▼</span>
+        </button>
+        <div class="questions-content">
+            {% if exam.questions %}
+                {% for question in exam.questions %}
+                    <div class="question-item">
+                        <div class="question-text">Q{{ question.number }}: {{ question.question }}</div>
+                        <ul class="choices-list">
+                            {% for choice in question.choices %}
+                                <li class="choice-item">{{ choice }}</li>
+                            {% endfor %}
+                        </ul>
+                        <div class="correct-answer">Correct Answer: {{ question.correct_answer }}</div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No questions available for this exam.</p>
+            {% endif %}
+        </div>
+    </div>
                     <table class="examinee-table">
                         <thead>
                             <tr>
@@ -179,6 +261,19 @@
                 exam.style.display = 'none';
             }
         });
+    }
+
+    function toggleQuestions(button) {
+        const content = button.nextElementSibling;
+        const icon = button.querySelector('.toggle-icon');
+        
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'block';
+            icon.textContent = '▲';
+        }
     }
     </script>
 </body>

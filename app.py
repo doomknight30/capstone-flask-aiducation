@@ -1356,6 +1356,100 @@ def generate_multiple_choice_question_with_context(text, question_number=1):
         }
     return mcq
 
+def generate_multiple_choice_question_with_complexity(text, question_number=1, difficulty="medium"):
+    """
+    Generate MCQ with varying complexity levels based on Bloom's Taxonomy.
+    Difficulty levels: "easy", "medium", "hard"
+    """
+    # Question types based on Bloom's Taxonomy, from simple to complex
+    question_types = {
+        "easy": [
+            "recall basic facts or information",
+            "identify main idea",
+            "define key terms",
+            "list important points",
+            "describe what happened"
+        ],
+        "medium": [
+            "explain relationships between concepts",
+            "compare and contrast ideas",
+            "classify information",
+            "interpret meaning",
+            "predict what might happen next"
+        ],
+        "hard": [
+            "analyze cause and effect",
+            "evaluate arguments or claims",
+            "synthesize information from multiple parts",
+            "justify a position or decision",
+            "create new connections or insights"
+        ]
+    }
+
+    # Select complexity based on progress
+    if question_number <= 2:
+        current_difficulty = "easy"
+    elif question_number <= 4:
+        current_difficulty = "medium"
+    else:
+        current_difficulty = "hard"
+
+    # Get question types for current difficulty
+    current_types = question_types[current_difficulty]
+    question_type = current_types[question_number % len(current_types)]
+
+    messages = [
+        {
+            "role": "system",
+            "content": f"""Create one {current_difficulty}-level MCQ focusing on {question_type}.
+            For {current_difficulty} questions:
+            - Easy: Focus on direct recall and basic comprehension
+            - Medium: Require analysis and application
+            - Hard: Need evaluation and synthesis of information
+            
+            Respond with ONLY valid JSON: {{"question": string, "choices": [string,string,string,string], "correct_answer": string}}.
+            Make choices distinctly different and avoid obvious wrong answers."""
+        },
+        {"role": "user", "content": f"Based on this text, create a {current_difficulty} question about {question_type}:\n\n{text}"}
+    ]
+
+    generated_text = gemini_complete(messages)
+    
+    try:
+        mcq = json.loads(generated_text)
+    except json.JSONDecodeError:
+        # Your existing fallback logic with complexity levels
+        fallback_questions = {
+            "easy": [
+                "What is directly stated in the text?",
+                "Which basic fact is mentioned?",
+                "What is the main topic?"
+            ],
+            "medium": [
+                "How do the concepts relate to each other?",
+                "What can be inferred from the passage?",
+                "What is the underlying meaning?"
+            ],
+            "hard": [
+                "What conclusions can be drawn?",
+                "How would you evaluate the argument?",
+                "What evidence supports the main claim?"
+            ]
+        }
+        
+        mcq = {
+            "question": fallback_questions[current_difficulty][question_number % 3],
+            "choices": [
+                "First possible answer",
+                "Second possible answer",
+                "Third possible answer",
+                "Fourth possible answer"
+            ],
+            "correct_answer": "First possible answer"
+        }
+
+    return mcq, current_difficulty
+
 @app.route('/submit_answer_and_generate_new', methods=['POST'])
 def submit_answer_and_generate_new():
     """Submit answer and generate new content with improved variety"""
@@ -1965,27 +2059,64 @@ def add_group_exam_time():
 @app.route('/records')
 @login_required
 def records():
-    if session.get('role') != 'teacher':
-        return redirect(url_for('homepage'))
-
-    db = connect_db()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM group_exams ORDER BY created_at DESC")
-    exams = cursor.fetchall()
-    group_exams = []
-    for exam in exams:
-        cursor.execute("SELECT username, score FROM group_exam_scores WHERE group_id = %s", (exam['group_id'],))
-        examinees = cursor.fetchall()
-        group_exams.append({
-            "group_id": exam['group_id'],
-            "host_username": exam['host_username'],
-            "created_at": exam.get('created_at'),
-            "source_content": exam.get('source_content', ''),  # <-- Make sure this is included
-            "examinees": examinees
-        })
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get all exams with their questions
+    cursor.execute("""
+        SELECT 
+            ge.group_id,
+            ge.created_at,
+            ge.source_content,
+            ge.host_username,
+            geq.question_number,
+            geq.passage,
+            geq.question,
+            geq.choices,
+            geq.correct_answer
+        FROM group_exams ge
+        LEFT JOIN group_exam_questions geq ON ge.group_id = geq.group_id
+        ORDER BY ge.created_at DESC, geq.question_number ASC
+    """)
+    
+    rows = cursor.fetchall()
+    
+    # Organize the data by group_id
+    exams = {}
+    for row in rows:
+        group_id = row['group_id']
+        if group_id not in exams:
+            exams[group_id] = {
+                'group_id': group_id,
+                'created_at': row['created_at'],
+                'source_content': row['source_content'],
+                'host_username': row['host_username'],
+                'questions': [],
+                'examinees': []
+            }
+        
+        if row['question'] is not None:  # Only add if there's a question
+            exams[group_id]['questions'].append({
+                'number': row['question_number'],
+                'passage': row['passage'],
+                'question': row['question'],
+                'choices': json.loads(row['choices']) if row['choices'] else [],
+                'correct_answer': row['correct_answer']
+            })
+    
+    # Get scores for each exam - Modified query to remove user_id join
+    for group_id in exams:
+        cursor.execute("""
+            SELECT username, score 
+            FROM group_exam_scores 
+            WHERE group_id = %s
+        """, (group_id,))
+        exams[group_id]['examinees'] = cursor.fetchall()
+    
     cursor.close()
-    db.close()
-    return render_template('records.html', group_exams=group_exams)
+    conn.close()
+    
+    return render_template('records.html', group_exams=list(exams.values()))
 
 @app.route('/check_exam_ended')
 def check_exam_ended():
@@ -2001,6 +2132,29 @@ def check_exam_ended():
     if row:
         return jsonify({"exam_ended": bool(row["exam_ended"])})
     return jsonify({"exam_ended": False})
+
+@app.route('/unselect_book', methods=['POST'])
+@login_required
+def unselect_book():
+    data = request.get_json()
+    book_id = data.get('book_id')
+    
+    if not book_id:
+        return jsonify({"status": "error", "message": "No book ID provided"})
+        
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("DELETE FROM selected_books WHERE id = %s AND user_id = %s", 
+                      (book_id, session['user_id']))
+        conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/debug/session')
 def debug_session():
