@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Browse Learning Plans | AI-ducation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        /* ...reuse styles from teacher_learning_plan.html... */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #4d6378, #283949, #182c3f, #051423);
+            background-size: 400% 400%;
+            animation: randomGradient 20s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeIn 2s ease-in forwards, randomGradient 20s ease-in-out infinite;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        #stars-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40vh;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            opacity: 0.3;
+            clip-path: polygon(
+                50% 0%, 61% 35%, 98% 35%, 
+                68% 57%, 79% 91%, 50% 70%, 
+                21% 91%, 32% 57%, 2% 35%, 
+                39% 35%
+            );
+            animation: twinkle 3s infinite alternate ease-in-out;
+        }
+        @keyframes twinkle {
+            from { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+            to { opacity: 0.7; transform: scale(1.3) rotate(15deg); }
+        }
+        @keyframes randomGradient {
+            0% { background-position: 20% 30%; }
+            20% { background-position: 80% 40%; }
+            40% { background-position: 60% 80%; }
+            60% { background-position: 30% 20%; }
+            80% { background-position: 90% 70%; }
+            100% { background-position: 20% 30%; }
+        }
+        .header {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .header .logo {
+            font-size: 40px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #ffffff;
+            width: 0;
+            display: inline-block;
+            position: relative;
+            margin-left: 20px;
+            animation: typing 4s steps(12, end) forwards, blink 0.6s step-end infinite;
+        }
+        @keyframes typing { from { width: 0; } to { width: 12ch; } }
+        @keyframes blink { 70% { border-color: transparent; } }
+        .header .logo::after {
+            content: "📚";
+            color: #ffffff;
+            font-size: 1.1em;
+            opacity: 0;
+            margin-left: 1px;
+            display: inline-block;
+            animation: bookAppear 1s ease forwards;
+            animation-delay: 4s;
+            transform: translateY(-4px);
+        }
+        @keyframes bookAppear {
+            from { opacity: 0; transform: translateY(10px) scale(0.9);}
+            to { opacity: 1; transform: translateY(-4px) scale(1);}
+        }
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 15px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+        .sidebar {
+            position: fixed;
+            left: 20px;
+            top: 202px;
+            width: 350px;
+            height: 560px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            border-radius: 12px;
+            margin: 5px;
+        }
+        .sidebar h3 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-align: center;
+            border-bottom: 2px solid #008080;
+            padding-bottom: 10px;
+        }
+        .sidebar-btn {
+            width: 100%;
+            height: 40px;
+            padding: 0 10px;
+            margin: 4px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #fff;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            transition: all 0.3s ease;
+        }
+        .sidebar-btn:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .dashboard-btn { background: #3b82f6; }
+        .library-btn { background: #008080; }
+        .settings-btn { background: #34495e; }
+        .homepage-btn {background:#283949;}
+        .main-content {
+            margin-left: 250px;
+            margin-top: 70px;
+            padding: 40px;
+            width: calc(100% - 250px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 73%;
+            margin: 10px auto 40px auto;
+            margin-left: 390px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 18px;
+            padding: 36px 32px 32px 32px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            max-height: 75.5vh;
+            overflow-y: auto;
+        }
+        .container h2 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 28px;
+            color: #FFF;
+            letter-spacing: 1px;
+        }
+        .search-bar {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 30px auto;
+            display: flex;
+            align-items: center;
+            background: #334155;
+            border-radius: 10px;
+            padding: 8px 16px;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+        }
+        .search-bar input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 1.1rem;
+            padding: 10px;
+            outline: none;
+        }
+        .search-bar button {
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.2s;
+        }
+        .search-bar button:hover {
+            background: #2563eb;
+        }
+        .plans-list {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .plan-card {
+            background: rgba(255,255,255,0.09);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(59,130,246,0.10);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: box-shadow 0.2s;
+        }
+        .plan-card:hover {
+            box-shadow: 0 4px 24px rgba(59,130,246,0.18);
+        }
+        .plan-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #4ade80;
+            margin-bottom: 8px;
+        }
+        .plan-teacher {
+            font-size: 1rem;
+            color: #b3e0e0;
+            margin-bottom: 8px;
+        }
+        .plan-topics {
+            font-size: 1rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .plan-files a {
+            display: inline-block;
+            background: #3b82f6;
+            color: #fff;
+            padding: 7px 16px;
+            border-radius: 8px;
+            margin-right: 10px;
+            text-decoration: none;
+            font-size: 0.98rem;
+            margin-top: 5px;
+            transition: background 0.2s;
+        }
+        .plan-files a:hover {
+            background: #2563eb;
+        }
+        .no-results {
+            color: #b3e0e0;
+            font-size: 1.1rem;
+            margin-top: 30px;
+        }
+        .apply-btn {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .apply-btn:hover {
+            background: #16a34a;
+        }
+        .plan-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 20px 10px 10px 390px;
+        }
+
+        .switch-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 10px;
+            background: #334155;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+            transition: background 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .switch-btn.active, .switch-btn:focus {
+            background: linear-gradient(90deg, #3b82f6 60%, #4ade80 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">AI-ducation</div>
+        <div class="nav-links">
+            <a href="{{ url_for('homepage') }}">Home</a>
+            <a href="{{ url_for('user_manual')}}" target="_blank">User Manual</a>
+            <a href="#">Feedback</a>
+            <a href="{{ url_for('logout') }}">LogOut</a>
+        </div>
+    </div>
+
+    <div id="stars-container"></div>
+    <script>
+        const container = document.getElementById("stars-container");
+        for (let i = 0; i < 40; i++) {
+            const star = document.createElement("div");
+            star.classList.add("star");
+            star.style.top = Math.random() * 100 + "%";
+            star.style.left = Math.random() * 100 + "%";
+            const size = Math.random() * 7 + 8;
+            star.style.width = size + "px";
+            star.style.height = size + "px";
+            star.style.animationDuration = (2 + Math.random() * 3) + "s";
+            star.style.animationDelay = Math.random() * 5 + "s";
+            container.appendChild(star);
+        }
+    </script>
+
+    <div class="sidebar">
+        <h3>Quick Navigation</h3>
+        <button class="sidebar-btn homepage-btn" onclick="location.href='{{ url_for('homepage') }}'">View Homepage</button>
+        <button class="sidebar-btn dashboard-btn" onclick="location.href='{{ url_for('dashboard') }}'">📊 View Dashboard</button>
+        <button class="sidebar-btn library-btn" onclick="location.href='{{ url_for('quiz_customization') }}'">Take Quiz</button>
+        <button class="sidebar-btn settings-btn" onclick="location.href='{{ url_for('account_settings') }}'">🔧 Account Settings</button>
+        <button class="sidebar-btn" onclick="location.href='{{ url_for('student_learning_plan') }}'">📚 Browse Learning Plans</button>
+    </div>
+
+    <div class="plan-switcher">
+        <button id="browseBtn" class="switch-btn active" onclick="showBrowse()">Browse Learning Plan</button>
+        <button id="viewBtn" class="switch-btn" onclick="showView()">View Learning Plans</button>
+    </div>
+
+    <div class="container" id = "browseContainer">
+        <h2>Browse Learning Plans</h2>
+        <form class="search-bar" id="searchForm" onsubmit="event.preventDefault(); searchPlans();">
+            <input type="text" id="searchInput" placeholder="Search by teacher or lesson plan name..." autocomplete="off">
+            <button type="submit">Search</button>
+        </form>
+
+    <div class="plans-list" id="plansList">
+        <!-- Plans will be rendered here by JavaScript only -->
+    </div>
+    </div>
+
+    <div class= "container" id = "viewContainer" style="display: none;">
+        <h2>View Learning Plans</h2>
+        <div class="plans-list" id="appliedPlansList">
+            <!-- Applied plans will be rendered here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+
+        function showBrowse() {
+            document.getElementById('browseContainer').style.display = 'flex';
+            document.getElementById('viewContainer').style.display = 'none';
+            document.getElementById('browseBtn').classList.add('active');
+            document.getElementById('viewBtn').classList.remove('active');
+        }
+
+        function showView() {
+            document.getElementById('browseContainer').style.display = 'none';
+            document.getElementById('viewContainer').style.display = 'flex';
+            document.getElementById('viewBtn').classList.add('active');
+            document.getElementById('browseBtn').classList.remove('active');
+            loadAppliedPlans();
+        }
+        function loadAppliedPlans() {
+            fetch('/get_applied_learning_plans')
+                .then(res => res.json())
+                .then(data => {
+                    const appliedPlansList = document.getElementById('appliedPlansList');
+                    appliedPlansList.innerHTML = '';
+                    if (data.length === 0) {
+                        appliedPlansList.innerHTML = '<div class="no-results">No applied lesson plans found.</div>';
+                        return;
+                    }
+                    data.forEach(plan => {
+                        const card = document.createElement('div');
+                        card.className = 'plan-card';
+                        let quizButtons = '';
+                        if (plan.status === 'accepted') {
+                            if (plan.topic1 && plan.file1_path) {
+                                quizButtons += `<button class="apply-btn" style="background:#3b82f6;margin-left:10px;" onclick="startQuiz('${plan.topic1}', '${plan.file1_path}')">Take Quiz for Topic 1</button>`;
+                            }
+                            if (plan.topic2 && plan.file2_path) {
+                                quizButtons += `<button class="apply-btn" style="background:#3b82f6;margin-left:10px;" onclick="startQuiz('${plan.topic2}', '${plan.file2_path}')">Take Quiz for Topic 2</button>`;
+                            }
+                        }
+                        card.innerHTML = `
+                            <div class="plan-title">${plan.plan_title}</div>
+                            <div class="plan-teacher">By: ${plan.teacher_name}</div>
+                            <div class="plan-topics">
+                                <strong>Topic 1:</strong> ${plan.topic1}<br>
+                                ${plan.topic2 ? `<strong>Topic 2:</strong> ${plan.topic2}` : ''}
+                            </div>
+                            <div class="plan-files">
+                                ${plan.file1_path ? `<a href="/static/${plan.file1_path}" target="_blank">View Topic 1 Material</a>` : ''}
+                                ${plan.file2_path ? `<a href="/static/${plan.file2_path}" target="_blank">View Topic 2 Material</a>` : ''}
+                            </div>
+                            <div class="plan-status">
+                                Status: <span style="font-weight:600; color:${plan.status === 'accepted' ? '#22c55e' : '#fbbf24'}">${plan.status.charAt(0).toUpperCase() + plan.status.slice(1)}</span>
+                                ${quizButtons}
+                            </div>
+                        `;
+                        appliedPlansList.appendChild(card);
+                    });
+                });
+        }
+        function startQuiz(topic, filePath) {
+            fetch('/auto_quiz_setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: topic, file_path: filePath })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success" && data.quiz_url) {
+                    window.location.href = data.quiz_url;
+                } else {
+                    alert(data.message || "Could not start quiz.");
+                }
+            })
+            .catch(() => alert("Error starting quiz."));
+        }
+        function searchPlans() {
+            const query = document.getElementById('searchInput').value.trim();
+            fetch(`/search_learning_plans?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const plansList = document.getElementById('plansList');
+                    plansList.innerHTML = '';
+                    if (data.length === 0) {
+                        plansList.innerHTML = '<div class="no-results">No learning plans found.</div>';
+                        return;
+                    }
+                    data.forEach(plan => {
+                        const card = document.createElement('div');
+                        card.className = 'plan-card';
+                        card.innerHTML = `
+                            <div class="plan-title">${plan.plan_title}</div>
+                            <div class="plan-teacher">By: ${plan.teacher_name}</div>
+                            <div class="plan-topics">
+                                <strong>Topic 1:</strong> ${plan.topic1}<br>
+                                ${plan.topic2 ? `<strong>Topic 2:</strong> ${plan.topic2}` : ''}
+                            </div>
+                            <div class="plan-files">
+                                ${plan.file1_path ? `<a href="/static/${plan.file1_path}" target="_blank">View Topic 1 Material</a>` : ''}
+                                ${plan.file2_path ? `<a href="/static/${plan.file2_path}" target="_blank">View Topic 2 Material</a>` : ''}
+                            </div>
+                            <button class="apply-btn" onclick="applyToPlan(${plan.plan_id})">Apply</button>
+                        `;
+                        plansList.appendChild(card);
+                    });
+                });
+        }
+        function applyToPlan(planId) {
+            fetch('/apply_learning_plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan_id: planId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("Applied to learning plan!");
+                } else {
+                    alert(data.message || "Could not apply.");
+                }
+            })
+            .catch(() => alert("Error applying to learning plan."));
+        }
+    </script>
+</body>
+</html>

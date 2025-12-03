@@ -405,6 +405,18 @@
             form.submit();
         }
     };
+
+    let questionStartTime = Date.now();
+
+    document.getElementById('quizForm').addEventListener('submit', function() {
+        const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000); // seconds
+        // Add a hidden input to send timeSpent to backend
+        let timeInput = document.createElement('input');
+        timeInput.type = 'hidden';
+        timeInput.name = 'time_spent';
+        timeInput.value = timeSpent;
+        this.appendChild(timeInput);
+    });
     </script>
 </body>
 </html>

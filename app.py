@@ -25,6 +25,10 @@ group_rooms = {}
 genai.configure(api_key=os.environ.get("GOOGLE_GENAI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
+UPLOAD_FOLDER = "uploads"
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -417,6 +421,22 @@ def quiz():
         if selected_answer == correct_answer:
             session["score"] += 1
 
+        # Save the user's answer and time spent to quiz_attempts table
+        time_spent = request.form.get("time_spent", type=int)
+        quiz_id = session.get("quiz_id")
+        question_id = questions[idx]["question_id"]  # Use the actual question_id from DB
+        user_id = session["user_id"]
+
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO quiz_attempts (user_id, quiz_id, question_id, answer, time_spent) VALUES (%s, %s, %s, %s, %s)",
+            (user_id, quiz_id, question_id, selected_answer, time_spent)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
         session["question_count"] += 1
         session["current_question_index"] = idx + 1
 
@@ -424,6 +444,8 @@ def quiz():
             return redirect(url_for("result"))
 
         idx += 1
+
+        
     else:
         if "remaining_time" not in session:
             session["remaining_time"] = session.get("time_limit", 0) * 60
@@ -630,12 +652,14 @@ def result():
     user_id = get_user_id(username, cursor)
 
     if user_id:
+        quiz_id = session.get("quiz_id")
+        topic = session.get("quiz_topic") or session.get("quiz_book_title") or session.get("quiz_prompt")
         cursor.execute(
             """
-            INSERT INTO user_progress (user_id, total_questions, correct_answers, current_difficulty, last_updated)
-            VALUES (%s, %s, %s, %s, NOW())
+            INSERT INTO user_progress (user_id, quiz_id, topic, total_questions, correct_answers, current_difficulty, last_updated)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
             """,
-            (user_id, total_questions, correct_answers, current_difficulty)
+            (user_id, quiz_id, topic, total_questions, correct_answers, current_difficulty)
         )
         db.commit()
 
@@ -1119,43 +1143,82 @@ def get_questions():
     all_questions = custom_questions + group_questions
     return jsonify(all_questions)
 
-@app.route("/dashboard")
+@app.route('/dashboard')
 @login_required
 def dashboard():
-    if "username" not in session:
-        return redirect(url_for("home"))
-    user = session["username"]
+    user_id = session.get('user_id')
+    # Fetch user info
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT first_name, birthdate, role FROM users WHERE user_id = %s", (user_id,))
+    user = cursor.fetchone()
+    # Fetch accepted lesson plans
+    cursor.execute("""
+        SELECT lp.plan_id, lp.plan_title, lp.topic1, lp.topic2, lp.file1_path, lp.file2_path, u.username AS teacher_name
+        FROM learning_plan_applications lpa
+        JOIN learning_plans lp ON lpa.plan_id = lp.plan_id
+        JOIN users u ON lp.teacher_id = u.user_id
+        WHERE lpa.student_id = %s AND lpa.status = 'accepted'
+        ORDER BY lpa.applied_at DESC
+    """, (user_id,))
+    accepted_plans = cursor.fetchall()
+    # Fetch quizzes taken by the user
+    cursor.execute("""
+    SELECT up.quiz_id, cq.source_content, up.topic, up.total_questions, up.correct_answers, up.last_updated
+        FROM user_progress up
+        LEFT JOIN custom_quizzes cq ON up.quiz_id = cq.quiz_id
+        WHERE up.user_id = %s
+        ORDER BY up.last_updated DESC
+    """, (user_id,))
+    quizzes = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("dashboard.html", user=user, accepted_plans=accepted_plans, quizzes=quizzes)
+
+@app.route('/get_quizzes_by_topics')
+@login_required
+def get_quizzes_by_topics():
+    user_id = session.get('user_id')
+    topics_param = request.args.get('topics', '')
+    if not topics_param:
+        return jsonify([])
+
+    # Normalize topics: split, trim, lowercase
+    topics = [t.strip().lower() for t in topics_param.split(',') if t.strip()]
+    if not topics:
+        return jsonify([])
 
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
-    # Fetch user's completed quizzes
-    cursor.execute("""
-        SELECT q.quiz_id, q.format, q.num_items, q.timed, q.time_limit, q.created_at, q.source_type, q.source_content
-        FROM custom_quizzes q
-        WHERE q.creator_username = %s
-        ORDER BY q.created_at DESC
-    """, (user,))
+
+    # Fetch quizzes for this user where topic matches any of the topics (case-insensitive)
+    # We'll use LOWER() in SQL for case-insensitive match
+    format_strings = ','.join(['%s'] * len(topics))
+    query = f"""
+        SELECT up.quiz_id, cq.source_content, up.topic, up.total_questions, up.correct_answers, up.last_updated
+        FROM user_progress up
+        LEFT JOIN custom_quizzes cq ON up.quiz_id = cq.quiz_id
+        WHERE up.user_id = %s AND LOWER(up.topic) IN ({format_strings})
+        ORDER BY up.last_updated DESC
+    """
+    params = [user_id] + topics
+    cursor.execute(query, params)
     quizzes = cursor.fetchall()
 
-    # Calculate average score from user_progress
-    cursor.execute("""
-        SELECT correct_answers, total_questions
-        FROM user_progress
-        WHERE user_id = (SELECT user_id FROM users WHERE username = %s)
-    """, (user,))
-    progress = cursor.fetchall()
-    total_correct = sum(row["correct_answers"] for row in progress if row["total_questions"])
-    total_questions = sum(row["total_questions"] for row in progress if row["total_questions"])
-    if total_questions > 0:
-        average_score = round((total_correct / total_questions) * 100, 2)
-    else:
-        average_score = 0
+    # Prepare output
+    result = []
+    for q in quizzes:
+        result.append({
+            'quiz_id': q['quiz_id'],
+            'topic': (q['topic'] or q['source_content'] or '').strip(),
+            'correct_answers': q['correct_answers'] or 0,
+            'total_questions': q['total_questions'] or 0,
+            'last_updated': q['last_updated'].strftime('%Y-%m-%d %H:%M') if q['last_updated'] else 'N/A'
+        })
 
-    quizzes_completed = len(quizzes)
     cursor.close()
     conn.close()
-
-    return render_template("dashboard.html", quizzes=quizzes, quizzes_completed=quizzes_completed, average_score=average_score)
+    return jsonify(result)
 
 @app.route('/get_quiz_questions/<int:quiz_id>')
 def get_quiz_questions(quiz_id):
@@ -1179,6 +1242,105 @@ def get_quiz_questions(quiz_id):
     conn.close()
     return jsonify(questions)
 
+@app.route('/get_quiz_details/<int:quiz_id>')
+@login_required
+def get_quiz_details(quiz_id):
+    user_id = session.get('user_id')
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get all user's answers for this quiz (one row per question)
+    cursor.execute("""
+        SELECT question_id, answer
+        FROM quiz_attempts
+        WHERE user_id = %s AND quiz_id = %s
+    """, (user_id, quiz_id))
+    user_attempts = cursor.fetchall()
+    user_answers = {}
+    for row in user_attempts:
+        user_answers[row['question_id']] = row['answer']
+
+    # Get quiz questions
+    cursor.execute("""
+        SELECT question_id, question_number, passage, question, choices, correct_answer
+        FROM custom_quiz_questions
+        WHERE quiz_id = %s
+        ORDER BY question_number ASC
+    """, (quiz_id,))
+    questions = cursor.fetchall()
+    for q in questions:
+        q['choices'] = json.loads(q['choices']) if q['choices'] else []
+        q['user_answer'] = user_answers.get(q['question_id'], None)
+    cursor.close()
+    conn.close()
+    return jsonify(questions)
+
+@app.route('/ai_analyze_quiz/<int:quiz_id>')
+@login_required
+def ai_analyze_quiz(quiz_id):
+    user_id = session.get('user_id')
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # Fetch all questions for the quiz
+    cursor.execute("""
+        SELECT question_id, question_number, passage, question, choices, correct_answer
+        FROM custom_quiz_questions
+        WHERE quiz_id = %s
+        ORDER BY question_number ASC
+    """, (quiz_id,))
+    questions = cursor.fetchall()
+
+    # Fetch user's answers and time spent for each question
+    cursor.execute("""
+        SELECT question_id, answer as user_answer, time_spent
+        FROM quiz_attempts
+        WHERE user_id = %s AND quiz_id = %s
+    """, (user_id, quiz_id))
+    attempts = {row['question_id']: row for row in cursor.fetchall()}
+
+    # Merge data for AI
+    quiz_data = []
+    for q in questions:
+        qid = q['question_id']
+        quiz_data.append({
+            "question_number": q['question_number'],
+            "question": q['question'],
+            "choices": json.loads(q['choices']) if q['choices'] else [],
+            "correct_answer": q['correct_answer'],
+            "user_answer": attempts.get(qid, {}).get('user_answer'),
+            "time_spent": attempts.get(qid, {}).get('time_spent')
+        })
+
+    cursor.close()
+    conn.close()
+
+    # Build prompt for AI
+    prompt = (
+        "You are an educational AI assistant. Analyze the following quiz attempt. "
+        "For each question, state if the user's answer is correct, comment on the time spent, "
+        "and provide specific feedback. After all questions, give an overall summary of the user's strengths, weaknesses, and suggestions for improvement.\n\n"
+        "Quiz Questions and Answers:\n"
+    )
+    for q in quiz_data:
+        prompt += (
+            f"Question {q['question_number']}:\n"
+            f"  Q: {q['question']}\n"
+            f"  Choices: {q['choices']}\n"
+            f"  Correct Answer: {q['correct_answer']}\n"
+            f"  User Answer: {q['user_answer']}\n"
+            f"  Time Spent: {q['time_spent']} seconds\n"
+        )
+    prompt += "\nPlease provide your analysis in this format:\n" \
+              "1. For each question: Correct/Incorrect, feedback, and time comment.\n" \
+              "2. Overall summary: strengths, weaknesses, and suggestions.\n" \
+              "Format your response using HTML with <h3> for each question, <ul> for feedback, and <b> for highlights."
+
+    # Call Gemini AI (or your model)
+    ai_response = gemini_complete([{"role": "user", "content": prompt}])
+    analysis = ai_response if isinstance(ai_response, str) else str(ai_response)
+
+    return jsonify({"analysis": analysis})
 
 @app.route('/set_generated_question', methods=['POST'])
 def set_generated_question():
@@ -1358,10 +1520,10 @@ def generate_multiple_choice_question_with_context(text, question_number=1):
 
 def generate_multiple_choice_question_with_complexity(text, question_number=1, difficulty="medium"):
     """
-    Generate MCQ with varying complexity levels based on Bloom's Taxonomy.
+    Generate MCQ with varying complexity levels.
     Difficulty levels: "easy", "medium", "hard"
     """
-    # Question types based on Bloom's Taxonomy, from simple to complex
+    # Question types, from simple to complex
     question_types = {
         "easy": [
             "recall basic facts or information",
@@ -2162,6 +2324,385 @@ def debug_session():
         'session': dict(session),
         'google_authorized': google.authorized if 'google' in globals() else 'Not available'
     }
+
+@app.route('/student_learning_plan', methods=['GET', 'POST'])
+@login_required
+def student_learning_plan():
+    return(render_template("student_learning_plan.html"))
+
+@app.route('/get_plan_progress/<int:plan_id>')
+@login_required
+def get_plan_progress(plan_id):
+    user_id = session.get('user_id')
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    # Get topics for the plan
+    cursor.execute("SELECT topic1, topic2 FROM learning_plans WHERE plan_id = %s", (plan_id,))
+    plan = cursor.fetchone()
+    topic1 = plan['topic1']
+    topic2 = plan['topic2']
+
+    # Get average score for quizzes matching topic1
+    cursor.execute("""
+        SELECT AVG(correct_answers / total_questions * 100) AS avg_score
+        FROM user_progress
+        WHERE user_id = %s AND topic = %s
+    """, (user_id, topic1))
+    topic1_avg = cursor.fetchone()['avg_score']
+    topic1_avg = round(topic1_avg, 2) if topic1_avg is not None else None
+
+    topic2_avg = None
+    if topic2:
+        cursor.execute("""
+            SELECT AVG(score) as avg_score
+            FROM custom_quizzes cq
+            JOIN quiz_attempts qa ON cq.quiz_id = qa.quiz_id
+            WHERE qa.user_id = %s AND cq.source_content = %s
+        """, (user_id, topic2))
+        topic2_avg = cursor.fetchone()['avg_score']
+        topic2_avg = round(topic2_avg, 2) if topic2_avg is not None else None
+
+    cursor.close()
+    conn.close()
+    return jsonify({'topic1_avg': topic1_avg, 'topic2_avg': topic2_avg})
+
+@app.route('/search_learning_plans')
+@login_required
+def search_learning_plans():
+    query = request.args.get('q', '').strip()
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    # Join with users to get teacher name
+    cursor.execute("""
+        SELECT lp.plan_id, lp.plan_title, lp.topic1, lp.topic2, lp.file1_path, lp.file2_path,
+               u.username AS teacher_name
+        FROM learning_plans lp
+        JOIN users u ON lp.teacher_id = u.user_id
+        WHERE lp.plan_title LIKE %s OR u.username LIKE %s
+        ORDER BY lp.created_at DESC
+    """, (f"%{query}%", f"%{query}%"))
+    plans = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(plans)
+
+@app.route('/get_applied_learning_plans')
+@login_required
+def get_applied_learning_plans():
+    user_id = session.get('user_id')
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT lp.plan_id, lp.plan_title, lp.topic1, lp.topic2, lp.file1_path, lp.file2_path,
+               u.username AS teacher_name, lpa.status
+        FROM learning_plan_applications lpa
+        JOIN learning_plans lp ON lpa.plan_id = lp.plan_id
+        JOIN users u ON lp.teacher_id = u.user_id
+        WHERE lpa.student_id = %s
+        ORDER BY lpa.applied_at DESC
+    """, (user_id,))
+    plans = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(plans)
+
+@app.route('/auto_quiz_setup', methods=['POST'])
+@login_required
+def auto_quiz_setup():
+    data = request.get_json()
+    topic = data.get('topic')
+    file_path = data.get('file_path')
+    user_id = session.get('user_id')
+
+    # Load the PDF, extract text
+    import PyPDF2
+    pdf_path = os.path.join(app.root_path, 'static', file_path)
+    text = ""
+    try:
+        with open(pdf_path, 'rb') as f:
+            reader = PyPDF2.PdfReader(f)
+            for page in reader.pages:
+                text += page.extract_text() or ""
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Could not read PDF."})
+
+    # Auto-generate quiz questions
+    num_items = 5  # or any number you want
+    questions = []
+    for i in range(num_items):
+        passage = select_relevant_excerpt_with_variety(text, [q["passage"] for q in questions])
+        mcq = generate_multiple_choice_question_with_context(passage, i+1)
+        questions.append({
+            "passage": passage,
+            "question": mcq["question"],
+            "choices": mcq["choices"],
+            "correct_answer": mcq["correct_answer"]
+        })
+
+    # Save quiz to DB
+    db = connect_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO custom_quizzes (creator_username, format, num_items, timed, time_limit, source_type, source_content)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (
+        session["username"],
+        "upload",
+        num_items,
+        "no",
+        0,
+        "upload",
+        topic
+    ))
+    quiz_id = cursor.lastrowid
+
+    # Insert each question
+    for idx, q in enumerate(questions, start=1):
+        cursor.execute("""
+            INSERT INTO custom_quiz_questions (quiz_id, question_number, passage, question, choices, correct_answer)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            quiz_id,
+            idx,
+            q["passage"],
+            q["question"],
+            json.dumps(q["choices"]),
+            q["correct_answer"]
+        ))
+
+    db.commit()
+    cursor.close()
+    db.close()
+
+    # Set up session for quiz
+    session["quiz_id"] = quiz_id
+    session["num_items"] = num_items
+    session["score"] = 0
+    session["question_count"] = 0
+    session["current_question_index"] = 0
+    session["quiz_topic"] = topic
+
+    # Redirect directly to quiz
+    return jsonify({"status": "success", "quiz_url": url_for('quiz')})
+
+@app.route('/apply_learning_plan', methods=['POST'])
+@login_required
+def apply_learning_plan():
+    data = request.get_json()
+    plan_id = data.get('plan_id')
+    student_id = session.get('user_id')
+    if not plan_id or not student_id:
+        return jsonify({"status": "error", "message": "Missing plan or user"}), 400
+
+    conn = connect_db()
+    cursor = conn.cursor()
+    # Prevent duplicate applications
+    cursor.execute("""
+        SELECT * FROM learning_plan_applications WHERE plan_id = %s AND student_id = %s
+    """, (plan_id, student_id))
+    if cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "error", "message": "Already applied"}), 409
+
+    cursor.execute("""
+        INSERT INTO learning_plan_applications (plan_id, student_id) VALUES (%s, %s)
+    """, (plan_id, student_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"status": "success"})
+
+@app.route('/teacher_learning_plan', methods=['GET', 'POST'])
+@login_required
+def teacher_learning_plan():
+    if session.get("role") not in ["teacher", "admin"]:
+        return redirect(url_for("home"))
+
+    message = None
+    if request.method == "POST":
+        plan_title = request.form.get("plan_title")
+        topic1 = request.form.get("topic1")
+        topic2 = request.form.get("topic2")
+        file1 = request.files.get("file1")
+        file2 = request.files.get("file2")
+
+        # Save files and plan info
+        uploads = []
+        # Ensure static/uploads exists
+        upload_folder = os.path.join(app.root_path, "static", "uploads")
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+
+        for idx, file in enumerate([file1, file2], start=1):
+            if file and allowed_file(file.filename):
+                filename = secure_filename(f"{session['username']}_plan_{plan_title}_topic{idx}_{file.filename}")
+                filepath = os.path.join(upload_folder, filename)
+                file.save(filepath)
+                # Save only the relative path for use with url_for('static', ...)
+                uploads.append(f"uploads/{filename}")
+            else:
+                uploads.append(None)
+
+        # Save to DB (create table learning_plans if needed)
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO learning_plans (teacher_id, plan_title, topic1, topic2, file1_path, file2_path, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        """, (session["user_id"], plan_title, topic1, topic2, uploads[0], uploads[1]))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        message = "Learning plan created successfully!"
+
+    # Always fetch plans for the current teacher/admin
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT lp.*, 
+            (SELECT GROUP_CONCAT(CONCAT(u.username, ':', lpa.application_id, ':', lpa.status) SEPARATOR ';')
+            FROM learning_plan_applications lpa
+            JOIN users u ON lpa.student_id = u.user_id
+            WHERE lpa.plan_id = lp.plan_id) AS applicants
+        FROM learning_plans lp
+        WHERE lp.teacher_id = %s
+        ORDER BY lp.created_at DESC
+    """, (session["user_id"],))
+    plans = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    # Parse applicants for easier use in template
+    for plan in plans:
+        plan["applicants_list"] = []
+        if plan.get("applicants"):
+            for entry in plan["applicants"].split(";"):
+                if entry:
+                    username, app_id, status = entry.split(":")
+                    plan["applicants_list"].append({
+                        "username": username,
+                        "application_id": app_id,
+                        "status": status
+                    })
+
+    return render_template("teacher_learning_plan.html", message=message, plans=plans)
+
+@app.route('/update_applicant_status', methods=['POST'])
+@login_required
+def update_applicant_status():
+    data = request.get_json()
+    application_id = data.get('application_id')
+    status = data.get('status')
+    if not application_id or status not in ['accepted', 'denied']:
+        return jsonify({"status": "error", "message": "Invalid request"}), 400
+
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE learning_plan_applications SET status = %s WHERE application_id = %s
+    """, (status, application_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"status": "success"})
+
+@app.route('/plan_members/<int:plan_id>')
+@login_required
+def plan_members(plan_id):
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get accepted members for this plan
+    cursor.execute("""
+        SELECT lpa.student_id AS user_id, u.username
+        FROM learning_plan_applications lpa
+        JOIN users u ON lpa.student_id = u.user_id
+        WHERE lpa.plan_id = %s AND lpa.status = 'accepted'
+    """, (plan_id,))
+    members = cursor.fetchall()
+
+    # Get plan topics
+    cursor.execute("SELECT topic1, topic2 FROM learning_plans WHERE plan_id = %s", (plan_id,))
+    plan = cursor.fetchone()
+    topics = [plan['topic1']]
+    if plan['topic2']:
+        topics.append(plan['topic2'])
+
+    # For each member, get progress and average scores
+    for member in members:
+        member['progress'] = {}
+        member['average_scores'] = {}
+        for topic in topics:
+            # Progress: count of quizzes taken for this topic
+            cursor.execute("""
+                SELECT COUNT(*) as quiz_count
+                FROM user_progress
+                WHERE user_id = %s AND LOWER(topic) = %s
+            """, (member['user_id'], topic.lower()))
+            member['progress'][topic] = cursor.fetchone()['quiz_count']
+
+            # Average score for this topic
+            cursor.execute("""
+                SELECT AVG(correct_answers / total_questions) * 100 as avg_score
+                FROM user_progress
+                WHERE user_id = %s AND LOWER(topic) = %s AND total_questions > 0
+            """, (member['user_id'], topic.lower()))
+            avg = cursor.fetchone()['avg_score']
+            member['average_scores'][topic] = round(avg, 2) if avg else None
+
+        # Get quizzes for this member and plan topics
+        format_strings = ','.join(['%s'] * len(topics))
+        query = f"""
+            SELECT quiz_id, topic, correct_answers, total_questions, last_updated
+            FROM user_progress
+            WHERE user_id = %s AND LOWER(topic) IN ({format_strings})
+            ORDER BY last_updated DESC
+        """
+        params = [member['user_id']] + [t.lower() for t in topics]
+        cursor.execute(query, params)
+        member['quizzes'] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return jsonify(members)
+
+@app.route('/get_member_quizzes/<int:user_id>')
+@login_required
+def get_member_quizzes(user_id):
+    plan_id = request.args.get('plan_id', type=int)
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # If plan_id is provided, filter by plan topics
+    if plan_id:
+        cursor.execute("SELECT topic1, topic2 FROM learning_plans WHERE plan_id = %s", (plan_id,))
+        plan = cursor.fetchone()
+        topics = [plan['topic1']]
+        if plan['topic2']:
+            topics.append(plan['topic2'])
+        # Prepare SQL for filtering by topics (case-insensitive)
+        format_strings = ','.join(['%s'] * len(topics))
+        query = f"""
+            SELECT quiz_id, topic, correct_answers, total_questions, last_updated
+            FROM user_progress
+            WHERE user_id = %s AND LOWER(topic) IN ({format_strings})
+            ORDER BY last_updated DESC
+        """
+        params = [user_id] + [t.lower() for t in topics]
+        cursor.execute(query, params)
+    else:
+        # No plan_id, return all quizzes for user
+        cursor.execute("""
+            SELECT quiz_id, topic, correct_answers, total_questions, last_updated
+            FROM user_progress
+            WHERE user_id = %s
+            ORDER BY last_updated DESC
+        """, (user_id,))
+    quizzes = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(quizzes) 
 
 if __name__ == "__main__":
     app.run(debug=False,  ssl_context = 'adhoc')

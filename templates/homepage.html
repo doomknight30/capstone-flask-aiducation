@@ -229,6 +229,7 @@
         .practice-btn { background: #ff8c5e; }
         .settings-btn { background: #34495e; }
         .records-btn {background: green;}
+        .learning-btn {background: pink;}
         /* Main Content */
         .main-content {
             margin-left: 250px;
@@ -342,13 +343,18 @@
         <button class="sidebar-btn dashboard-btn" onclick="location.href='{{ url_for('dashboard') }}'">📊 View Account Overview</button>
         {% if role == 'admin' %}
         <button class="sidebar-btn admin-btn" onclick="location.href='{{ url_for('admin_dashboard') }}'">⚙️ Admin Panel</button>
+        <button class="sidebar-btn group-quiz-btn" onclick="location.href='{{ url_for('group_exam') }}'">📝 Start Group Exam</button>
+        <button class="sidebar-btn records-btn" onclick="location.href='{{ url_for( 'records') }}'"> Check Records </button>
+        <button class="sidebar-btn learning-btn" onclick="location.href='{{ url_for( 'teacher_learning_plan') }}'"> Learning Plan </button>
         {%elif role == 'teacher' %}
         <button class="sidebar-btn group-quiz-btn" onclick="location.href='{{ url_for('group_exam') }}'">📝 Start Group Exam</button>
         <button class="sidebar-btn records-btn" onclick="location.href='{{ url_for( 'records') }}'"> Check Records </button>
+        <button class="sidebar-btn learning-btn" onclick="location.href='{{ url_for( 'teacher_learning_plan') }}'"> Learning Plan </button>
         {% endif %}
         <button class="sidebar-btn library-btn" onclick="location.href='{{ url_for('library')}}'"> View Library</button>
         <button class="sidebar-btn quiz-btn" onclick="location.href='{{ url_for('quiz_customization')}}'">Take Quiz</button>
         <button class="sidebar-btn settings-btn" onclick="location.href='{{ url_for('account_settings') }}'">🔧 Account Settings</button>
+        <button class="sidebar-btn learning-btn" onclick="location.href='{{ url_for( 'student_learning_plan') }}'"> View Learning Plans </button>
         <button class="btn practice-btn" onclick="toggleJoinGroup()">Join Group Exam</button>
         <div id="joinGroupArea" style="display:none; margin-top:20px;">
             <form method="POST" action="{{ url_for('join_group_exam') }}">

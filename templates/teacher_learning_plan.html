@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create Learning Plan | AI-ducation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #4d6378, #283949, #182c3f, #051423);
+            background-size: 400% 400%;
+            animation: randomGradient 20s ease-in-out infinite;
+            position: relative;
+            overflow: hidden; /* disables main scroll */
+            opacity: 0;
+            animation: fadeIn 2s ease-in forwards, randomGradient 20s ease-in-out infinite;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        #stars-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40vh;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            opacity: 0.3;
+            clip-path: polygon(
+                50% 0%, 61% 35%, 98% 35%, 
+                68% 57%, 79% 91%, 50% 70%, 
+                21% 91%, 32% 57%, 2% 35%, 
+                39% 35%
+            );
+            animation: twinkle 3s infinite alternate ease-in-out;
+        }
+        @keyframes twinkle {
+            from { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+            to { opacity: 0.7; transform: scale(1.3) rotate(15deg); }
+        }
+        @keyframes randomGradient {
+            0% { background-position: 20% 30%; }
+            20% { background-position: 80% 40%; }
+            40% { background-position: 60% 80%; }
+            60% { background-position: 30% 20%; }
+            80% { background-position: 90% 70%; }
+            100% { background-position: 20% 30%; }
+        }
+        .header {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .header .logo {
+            font-size: 40px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #ffffff;
+            width: 0;
+            display: inline-block;
+            position: relative;
+            margin-left: 20px;
+            animation: typing 4s steps(12, end) forwards, blink 0.6s step-end infinite;
+        }
+        @keyframes typing { from { width: 0; } to { width: 12ch; } }
+        @keyframes blink { 70% { border-color: transparent; } }
+        .header .logo::after {
+            content: "📚";
+            color: #ffffff;
+            font-size: 1.1em;
+            opacity: 0;
+            margin-left: 1px;
+            display: inline-block;
+            animation: bookAppear 1s ease forwards;
+            animation-delay: 4s;
+            transform: translateY(-4px);
+        }
+        @keyframes bookAppear {
+            from { opacity: 0; transform: translateY(10px) scale(0.9);}
+            to { opacity: 1; transform: translateY(-4px) scale(1);}
+        }
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 15px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+        .sidebar {
+            position: fixed;
+            left: 20px;
+            top: 202px;
+            width: 350px;
+            height: 560px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            border-radius: 12px;
+            margin: 5px;
+        }
+        .sidebar h3 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-align: center;
+            border-bottom: 2px solid #008080;
+            padding-bottom: 10px;
+        }
+        .sidebar-btn {
+            width: 100%;
+            height: 40px;
+            padding: 0 10px;
+            margin: 4px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #fff;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            transition: all 0.3s ease;
+        }
+        .sidebar-btn:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .dashboard-btn { background: #3b82f6; }
+        .library-btn { background: #008080; }
+        .settings-btn { background: #34495e; }
+        .homepage-btn {background:#283949;}
+        .main-content {
+            margin-left: 250px;
+            margin-top: 70px;
+            padding: 40px;
+            width: calc(100% - 250px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 73%;
+            margin: 10px auto 40px auto;
+            margin-left: 390px; /* moves container to the right */
+            background: rgba(255,255,255,0.07);
+            border-radius: 18px;
+            padding: 36px 32px 32px 32px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            max-height: 75.5vh;
+            overflow-y: auto;
+        }
+
+        .container h2 {
+            font-size: 3rem;
+            font-weight: 600;
+            margin-bottom: 28px;
+            color: #FFF;
+            letter-spacing: 1px;
+        }
+
+        .container label {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #fff;
+            text-align: left;
+            width: 100%;
+        }
+
+        .container input[type="text"], 
+        .container input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 10px;
+            background: #334155;
+            color: #fff;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        .container input[type="file"] {
+            background: #222;
+            color: #b3e0e0;
+        }
+
+        .container .btn {
+            margin-top: 30px;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #3b82f6 60%, #4ade80 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        .container .btn:hover {
+            background: linear-gradient(90deg, #2563eb 60%, #22c55e 100%);
+            box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+        }
+
+        .container .message {
+            margin-top: 18px;
+            color: #4ade80;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        .plan-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 20px 10px 10px 390px;
+        }
+
+        .switch-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 10px;
+            background: #334155;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+            transition: background 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .switch-btn.active, .switch-btn:focus {
+            background: linear-gradient(90deg, #3b82f6 60%, #4ade80 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+        }
+        #plansList {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            margin-top: 18px;
+            align-items: center;
+        }
+
+        .plan-card {
+            background: rgba(255,255,255,0.09);
+            border-radius: 16px;
+            padding: 28px 32px 22px 32px;
+            box-shadow: 0 2px 16px rgba(59,130,246,0.13);
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: box-shadow 0.2s;
+            position: relative;
+        }
+
+        .plan-card:hover {
+            box-shadow: 0 4px 32px rgba(59,130,246,0.18);
+        }
+
+        .plan-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4ade80;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .plan-topics {
+            font-size: 1.08rem;
+            color: #fff;
+            margin-bottom: 14px;
+        }
+
+        .plan-files {
+            margin-bottom: 14px;
+        }
+
+        .plan-files a {
+            display: inline-block;
+            background: #3b82f6;
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 8px;
+            margin-right: 10px;
+            text-decoration: none;
+            font-size: 1rem;
+            margin-top: 5px;
+            transition: background 0.2s;
+        }
+
+        .plan-files a:hover {
+            background: #2563eb;
+        }
+
+        .applicants-section {
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 16px 18px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .applicants-section h4 {
+            color: #4ade80;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .applicants-section ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .applicants-section li {
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .applicants-section button {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            padding: 6px 16px;
+            font-size: 0.98rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 6px;
+            transition: background 0.2s;
+        }
+
+        .applicants-section button:last-child {
+            background: #dc2626;
+        }
+
+        .applicants-section button:hover {
+            filter: brightness(1.1);
+        }
+
+        .applicants-section span {
+            font-weight: 600;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">AI-ducation</div>
+        <div class="nav-links">
+            <a href="{{ url_for('homepage') }}">Home</a>
+            <a href="{{ url_for('user_manual')}}" target="_blank">User Manual</a>
+            <a href="#">Feedback</a>
+            <a href="{{ url_for('logout') }}">LogOut</a>
+        </div>
+    </div>
+
+    <div id="stars-container"></div>
+
+    <script>
+        const container = document.getElementById("stars-container");
+
+        for (let i = 0; i < 40; i++) {
+            const star = document.createElement("div");
+            star.classList.add("star");
+
+            // random position but only inside the lower container
+            star.style.top = Math.random() * 100 + "%";
+            star.style.left = Math.random() * 100 + "%";
+
+            // random size (8px–15px)
+            const size = Math.random() * 7 + 8;
+            star.style.width = size + "px";
+            star.style.height = size + "px";
+
+            // random twinkle timing
+            star.style.animationDuration = (2 + Math.random() * 3) + "s";
+            star.style.animationDelay = Math.random() * 5 + "s";
+
+            container.appendChild(star);
+        }
+    </script>
+
+    <div class="sidebar">
+        <h3>Quick Navigation</h3>
+        <button class="sidebar-btn homepage-btn" onclick="location.href='{{ url_for('homepage') }}'">View Homepage</button>
+        <button class="sidebar-btn dashboard-btn" onclick="location.href='{{ url_for('dashboard') }}'">📊 View Dashboard</button>
+        <button class="sidebar-btn library-btn" onclick="location.href='{{ url_for('quiz_customization') }}'"> Take Quiz </button>
+        <button class="sidebar-btn settings-btn" onclick="location.href='{{ url_for('account_settings') }}'">🔧 Account Settings</button>
+    </div>
+
+    <div class="plan-switcher">
+        <button id="createBtn" class="switch-btn active" onclick="showCreate()">Create Learning Plan</button>
+        <button id="viewBtn" class="switch-btn" onclick="showView()">View Learning Plans</button>
+    </div>
+
+    <div class="container" id="createContainer">
+        <h2>Create a Learning Plan</h2>
+        {% if message %}
+        <div class="message">{{ message }}</div>
+        {% endif %}
+        <form method="POST" enctype="multipart/form-data">
+            <label for="plan_title">Learning Plan Title</label>
+            <input type="text" name="plan_title" id="plan_title" required />
+
+            <label for="topic1">Topic 1</label>
+            <input type="text" name="topic1" id="topic1" required />
+
+            <label for="file1">Upload Lesson Material for Topic 1 (PDF)</label>
+            <input type="file" name="file1" id="file1" accept=".pdf" required />
+
+            <label for="topic2">Topic 2 (optional)</label>
+            <input type="text" name="topic2" id="topic2" />
+
+            <label for="file2">Upload Lesson Material for Topic 2 (PDF, optional)</label>
+            <input type="file" name="file2" id="file2" accept=".pdf" />
+
+            <button type="submit" class="btn">Create Learning Plan</button>
+        </form>
+    </div>
+
+    <div class="container" id="viewContainer" style="display:none;">
+        <h2>Your Learning Plans</h2>
+            <div id="plansList">
+                {% for plan in plans %}
+                <div class="plan-card" onclick="showPlanMembers({{ plan.plan_id}})">
+                    <div class="plan-title">{{ plan.plan_title }}</div>
+                    <div class="plan-topics">
+                        <strong>Topic 1:</strong> {{ plan.topic1 }}<br>
+                        {% if plan.topic2 %}
+                            <strong>Topic 2:</strong> {{ plan.topic2 }}
+                        {% endif %}
+                    </div>
+                    <div class="plan-files">
+                        {% if plan.file1_path %}
+                            <a href="{{ url_for('static', filename=plan.file1_path) }}" target="_blank">View Topic 1 Material</a>
+                        {% endif %}
+                        {% if plan.file2_path %}
+                            <a href="{{ url_for('static', filename=plan.file2_path) }}" target="_blank">View Topic 2 Material</a>
+                        {% endif %}
+                    </div>
+                    <div class="applicants-section">
+                        <h4>Applicants:</h4>
+                        {% if plan.applicants_list %}
+                            <ul>
+                            {% for applicant in plan.applicants_list %}
+                                <li>
+                                    {{ applicant.username }} 
+                                    {% if applicant.status == 'pending' %}
+                                        <button onclick="updateApplicantStatus({{ applicant.application_id }}, 'accepted')">Accept</button>
+                                        <button onclick="updateApplicantStatus({{ applicant.application_id }}, 'denied')">Deny</button>
+                                    {% elif applicant.status == 'accepted' %}
+                                        <span style="color: #22c55e;">Accepted</span>
+                                    {% elif applicant.status == 'denied' %}
+                                        <span style="color: #dc2626;">Denied</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span>No applicants yet.</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+    </div>
+
+        <div id="planMembersModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999;">
+        <div style="background:#fff; color:#222; border-radius:12px; max-width:900px; margin:60px auto; padding:32px; position:relative; max-height:80vh; overflow-y:auto;">
+            <span style="position:absolute; top:18px; right:24px; font-size:2rem; cursor:pointer;" onclick="closePlanMembers()">×</span>
+            <div id="planMembersContent"></div>
+        </div>
+
+        <div id="quizDetailsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:999;">
+        <div style="background:#283949; color:#fff; border-radius:16px; max-width:700px; margin:60px auto; padding:32px; position:relative; max-height:80vh; overflow-y:auto;">
+            <span style="position:absolute; top:18px; right:24px; font-size:2rem; cursor:pointer;" onclick="closeQuizDetails()">×</span>
+            <div id="quizDetailsContent"></div>
+        </div>
+        </div>
+
+        <div id="memberQuizzesModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:10000;">
+        <div style="background:#fff; color:#222; border-radius:12px; max-width:600px; margin:60px auto; padding:32px; position:relative; max-height:80vh; overflow-y:auto;">
+            <span style="position:absolute; top:18px; right:24px; font-size:2rem; cursor:pointer;" onclick="closeMemberQuizzes()">×</span>
+            <div id="memberQuizzesContent"></div>
+        </div>
+        </div>
+
+    </div>
+<script>
+function showCreate() {
+    document.getElementById('createContainer').style.display = 'flex';
+    document.getElementById('viewContainer').style.display = 'none';
+    document.getElementById('createBtn').classList.add('active');
+    document.getElementById('viewBtn').classList.remove('active');
+}
+
+function showView() {
+    document.getElementById('createContainer').style.display = 'none';
+    document.getElementById('viewContainer').style.display = 'flex';
+    document.getElementById('viewBtn').classList.add('active');
+    document.getElementById('createBtn').classList.remove('active');
+    // Optionally, load plans via AJAX here
+}
+function updateApplicantStatus(applicationId, status) {
+    fetch('/update_applicant_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ application_id: applicationId, status: status })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            location.reload(); // Refresh to show updated status
+        } else {
+            alert(data.message || "Could not update status.");
+        }
+    })
+    .catch(() => alert("Error updating applicant status."));
+}
+function showPlanMembers(planId) {
+    document.getElementById('planMembersContent').innerHTML = "<b>Loading...</b>";
+    document.getElementById('planMembersModal').style.display = 'block';
+    fetch(`/plan_members/${planId}`)
+        .then(res => res.json())
+        .then(members => {
+            let html = `<h2>Accepted Members & Progress</h2>`;
+            if (members.length === 0) {
+                html += "<div>No accepted members yet.</div>";
+            } else {
+                html += `<table style="width:100%; border-collapse:collapse; margin-top:18px;">
+                    <thead>
+                        <tr style="background:#334155; color:#4ade80;">
+                            <th style="padding:8px;">Username</th>
+                            <th style="padding:8px;">Progress</th>
+                            <th style="padding:8px;">Average Scores</th>
+                            <th style="padding:8px;">Quizzes</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                members.forEach(m => {
+                    html += `<tr style="background:rgba(255,255,255,0.07); color:#222;">
+                        <td style="padding:8px;">${m.username}</td>
+                        <td style="padding:8px;">${Object.entries(m.progress).map(([topic, count]) => `<b>${topic}:</b> ${count} quiz${count==1?'':'zes'}`).join('<br>')}</td>
+                        <td style="padding:8px;">${Object.entries(m.average_scores).map(([topic, avg]) => `<b>${topic}:</b> ${avg !== null ? avg + '%' : 'N/A'}`).join('<br>')}</td>
+                        <td style="padding:8px;">
+                            <button class="switch-btn" style="padding:2px 10px; font-size:0.95rem;" onclick="showMemberQuizzes(${m.user_id}, '${m.username}', ${planId})">View Quizzes</button>
+                        </td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+            document.getElementById('planMembersContent').innerHTML = html;
+        });
+}
+function closePlanMembers() {
+    document.getElementById('planMembersModal').style.display = 'none';
+}
+
+function viewQuiz(quizId) {
+    closeMemberQuizzes();
+    document.getElementById('quizDetailsContent').innerHTML = "<b>Loading...</b>";
+    document.getElementById('quizDetailsModal').style.display = 'block';
+    fetch(`/get_quiz_details/${quizId}`)
+        .then(res => res.json())
+        .then(questions => {
+            let html = `<h2>Quiz Details</h2>`;
+            questions.forEach((q, idx) => {
+                html += `<div style="margin-bottom:18px;">
+                    <b>Q${idx + 1}:</b> ${q.question}<br>
+                    <ul style="margin:0 0 0 18px;">`;
+                q.choices.forEach((choice, cidx) => {
+                    let isCorrect = (choice === q.correct_answer);
+                    let isUser = (choice === q.user_answer);
+                    let style = '';
+                    if (isCorrect && isUser) {
+                        style = 'background:#4ade80;color:#1e293b;font-weight:700;border-radius:5px;padding:2px 6px;';
+                    } else if (isCorrect) {
+                        style = 'color:#22c55e;font-weight:600;';
+                    } else if (isUser) {
+                        style = 'background:#fbbf24;color:#1e293b;font-weight:600;border-radius:5px;padding:2px 6px;';
+                    }
+                    html += `<li style="margin-bottom:2px;${style}">
+                        ${String.fromCharCode(65 + cidx)}. ${choice}
+                        ${isCorrect ? ' <span style="font-size:0.95em;">(Correct)</span>' : ''}
+                        ${isUser ? ' <span style="font-size:0.95em;">(Their answer)</span>' : ''}
+                    </li>`;
+                });
+                html += `</ul></div>`;
+            });
+            document.getElementById('quizDetailsContent').innerHTML = html;
+        });
+}
+function closeQuizDetails() {
+    document.getElementById('quizDetailsModal').style.display = 'none';
+}
+
+function showMemberQuizzes(userId, username, planId) {
+    document.getElementById('memberQuizzesContent').innerHTML = "<b>Loading quizzes...</b>";
+    document.getElementById('memberQuizzesModal').style.display = 'block';
+    fetch(`/get_member_quizzes/${userId}?plan_id=${planId}`)
+        .then(res => res.json())
+        .then(quizzes => {
+            let html = `<h3>Quizzes for ${username}</h3>`;
+            if (!quizzes.length) {
+                html += "<div>No quizzes found.</div>";
+            } else {
+                html += `<table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                    <thead>
+                        <tr style="background:#334155; color:#4ade80;">
+                            <th style="padding:7px;">Topic</th>
+                            <th style="padding:7px;">Score</th>
+                            <th style="padding:7px;">Date</th>
+                            <th style="padding:7px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                quizzes.forEach(q => {
+                    let score = (q.total_questions && q.total_questions > 0)
+                        ? ((q.correct_answers / q.total_questions) * 100).toFixed(2)
+                        : 0;
+                    html += `<tr>
+                        <td style="padding:7px;">${q.topic}</td>
+                        <td style="padding:7px;">${score}%</td>
+                        <td style="padding:7px;">${q.last_updated}</td>
+                        <td style="padding:7px;">
+                            <button class="switch-btn" style="padding:2px 10px; font-size:0.95rem;" onclick="viewQuiz(${q.quiz_id})">View</button>
+                        </td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+            document.getElementById('memberQuizzesContent').innerHTML = html;
+        });
+}
+function closeMemberQuizzes() {
+    document.getElementById('memberQuizzesModal').style.display = 'none';
+}
+</script>
+</body>
+</html>

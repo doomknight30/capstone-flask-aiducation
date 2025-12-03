@@ -251,57 +251,139 @@
         .quiz-btn { background: #008080; color: #fff; }
         .practice-btn { background: #ff8c5e; color: #fff; }
         .settings-btn { background: #34495e; color: #fff; }
-    </style>
-</head>
-<script>
-    function goTo(url) {
-        window.location.href = url;
-    }
-    function toggleDropdown() {
-        document.getElementById("dropdownMenu").classList.toggle("show");
-    }
-    window.onclick = function(event) {
-        if (!event.target.matches('.burger-menu') && !event.target.matches('.bar')) {
-            var dropdowns = document.getElementsByClassName("dropdown-menu");
-            for (var i = 0; i < dropdowns.length; i++) {
-                var openDropdown = dropdowns[i];
-                if (openDropdown.classList.contains('show')) {
-                    openDropdown.classList.remove('show');
-                }
+        .profile-card {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.09);
+            border-radius: 16px;
+            padding: 28px 32px;
+            box-shadow: 0 2px 16px rgba(59,130,246,0.13);
+            width: 90%;
+            max-width: 700px;
+            margin: 30px auto 18px auto;
+        }
+        .profile-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            margin-right: 32px;
+            background: #334155;
+            object-fit: cover;
+        }
+        .profile-info h2 {
+            font-size: 2rem;
+            color: #4ade80;
+            margin-bottom: 8px;
+        }
+        .profile-info p {
+            font-size: 1.1rem;
+            margin: 4px 0;
+            color: #fff;
+        }
+        .overview-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 24px 0 0 0;
+        }
+        .switch-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 10px;
+            background: #334155;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+            transition: background 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .switch-btn.active, .switch-btn:focus {
+            background: linear-gradient(90deg, #3b82f6 60%, #4ade80 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+        }
+        .plan-card {
+            background: linear-gradient(90deg, #334155 80%, #4ade80 100%);
+            border-radius: 18px;
+            padding: 32px 36px 28px 36px;
+            box-shadow: 0 6px 32px rgba(59,130,246,0.18);
+            width: 95%;
+            max-width: 700px;
+            margin: 18px auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: box-shadow 0.2s, transform 0.2s;
+            position: relative;
+            border: 2px solid #4ade80;
+            cursor: pointer;
+        }
+
+        .plan-card:hover {
+            box-shadow: 0 12px 48px rgba(59,130,246,0.28);
+            transform: scale(1.02);
+            border-color: #3b82f6;
+        }
+
+        .plan-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4ade80;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px #0003;
+        }
+
+        .plan-teacher {
+            font-size: 1.1rem;
+            color: #b3e0e0;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .plan-topics {
+            font-size: 1.08rem;
+            color: #fff;
+            margin-bottom: 14px;
+            font-weight: 500;
+        }
+
+        .plan-files {
+            margin-bottom: 14px;
+        }
+
+        .plan-files a {
+            display: inline-block;
+            background: #3b82f6;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 8px;
+            margin-right: 10px;
+            text-decoration: none;
+            font-size: 1.05rem;
+            margin-top: 5px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px #0002;
+            transition: background 0.2s;
+        }
+
+        .plan-files a:hover {
+            background: #2563eb;
+        }
+
+        @media (max-width: 800px) {
+            .plan-card {
+                max-width: 98vw;
+                padding: 18px 10px;
+            }
+            .plan-title {
+                font-size: 1.3rem;
             }
         }
-    }
-    function viewQuestions(quiz_id) {
-        fetch(`/get_quiz_questions/${quiz_id}`)
-            .then(res => res.json())
-            .then(data => {
-                let html = "";
-                if (data.length === 0) {
-                    html = "<p>No questions found for this quiz.</p>";
-                } else {
-                    data.forEach((q, i) => {
-                        html += `<div style="margin-bottom:24px;text-align:left;">
-                            <b>Q${i+1}:</b> ${q.question}<br>
-                            <span style="color:#008080;"><i>Passage:</i></span>
-                            <div style="background:#f5f5f5;color:#222;padding:8px 10px;border-radius:6px;margin:6px 0 10px 0;max-height:90px;overflow:auto;font-size:0.98em;">
-                                ${q.passage ? q.passage : "<i>No passage available.</i>"}
-                            </div>
-                            <b>Choices:</b>
-                            <ul style="margin:0 0 8px 20px;">
-                                ${q.choices.map(c => `<li>${c}</li>`).join('')}
-                            </ul>
-                            <b>Correct Answer:</b> <span style="color:#008080;">${q.correct_answer}</span>
-                        </div>`;
-                    });
-                }
-                document.getElementById("modalQuestions").innerHTML = html;
-                document.getElementById("questionsModal").style.display = "flex";
-            });
-    }
-    function closeModal() {
-        document.getElementById("questionsModal").style.display = "none";
-    }
-</script>
+    </style>
+</head>
 <body>
     <div class="header">
         <div class="logo">AI-ducation</div>
@@ -326,75 +408,323 @@
 
     <div id="stars-container"></div>
 
-    <script>
-    const container = document.getElementById("stars-container");
-
-    for (let i = 0; i < 40; i++) {
-        const star = document.createElement("div");
-        star.classList.add("star");
-
-        // random position but only inside the lower container
-        star.style.top = Math.random() * 100 + "%";
-        star.style.left = Math.random() * 100 + "%";
-
-        // random size (8px–15px)
-        const size = Math.random() * 7 + 8;
-        star.style.width = size + "px";
-        star.style.height = size + "px";
-
-        // random twinkle timing
-        star.style.animationDuration = (2 + Math.random() * 3) + "s";
-        star.style.animationDelay = Math.random() * 5 + "s";
-
-        container.appendChild(star);
-    }
-    </script>
-
-    <div class="main-content" style="display: flex; flex-direction: column; align-items: center;">
-        <div class="progress-panel" style="text-align:center;">
-            <h3>Your Progress</h3>
-            <p>Quizzes Completed: {{ quizzes_completed }}</p>
-            <p>Average Score: {{ average_score }}%</p>
+    <div class="profile-card">
+    <img src="{{ url_for('static', filename='default_avatar.png') }}" alt="Avatar" class="profile-avatar">
+    <div class="profile-info">
+            <h2>{{ user.first_name }}</h2>
+            <p><b>Age:</b> {{ user.age }}</p>
+            <p><b>Birthdate:</b>
+                {% if user.birthdate %}
+                    {{ user.birthdate.strftime('%Y-%m-%d') }}
+                {% else %}
+                    Not set
+                {% endif %}
+            </p>
+            <p><b>Role:</b> {{ user.role|capitalize }}</p>
         </div>
-        <div class="container" style="width: 100%;  margin: 0 auto;">
-            <h3 style="text-align:center;">Your Past Exams</h3>
-            {% if quizzes %}
-            <table style="width:100%;margin-top:20px;background:rgba(255,255,255,0.08);border-radius:8px;text-align:center;">
+    </div>
+
+    <div class="overview-switcher">
+        <button class="switch-btn active" id="quizzesBtn" onclick="showQuizzes()">All Quizzes</button>
+        <button class="switch-btn" id="plansBtn" onclick="showPlans()">Lesson Plans</button>
+    </div>
+
+    <div class="container" id="quizzesContainer">
+    <h3>Your Quiz History</h3>
+        {% if quizzes %}
+            <table style="width:100%; border-collapse:collapse; margin-top:18px;">
                 <thead>
-                    <tr>
-                        <th>Quiz ID</th>
-                        <th>Format</th>
-                        <th>Date</th>
-                        <th>Questions</th>
+                    <tr style="background:#334155; color:#4ade80;">
+                        <th style="padding:10px;">Topic</th>
+                        <th style="padding:10px;">Correct Answers</th>
+                        <th style="padding:10px;">Total Questions</th>
+                        <th style="padding:10px;">Score (%)</th>
+                        <th style="padding:10px;">Date Taken</th>
+                        <th style="padding:10px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                {% for quiz in quizzes %}
-                    <tr>
-                        <td>{{ quiz.quiz_id }}</td>
-                        <td>{{ quiz.format|capitalize }}</td>
-                        <td>{{ quiz.created_at.strftime('%Y-%m-%d') if quiz.created_at else '' }}</td>
-                        <td>
-                            <button onclick="viewQuestions({{ quiz.quiz_id }})" style="padding:6px 14px;border-radius:6px;background:#008080;color:#fff;border:none;cursor:pointer;">View Questions</button>
+                    {% for quiz in quizzes %}
+                    <tr style="background:rgba(255,255,255,0.07); color:#fff;">
+                        <td style="padding:10px;">{{ quiz.topic or quiz.source_content }}</td>
+                        <td style="padding:10px;">{{ quiz.correct_answers }}</td>
+                        <td style="padding:10px;">{{ quiz.total_questions }}</td>
+                        <td style="padding:10px;">
+                            {% if quiz.total_questions and quiz.total_questions > 0 %}
+                                {{ ((quiz.correct_answers / quiz.total_questions) * 100)|round(2) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px;">
+                            {{ quiz.last_updated.strftime('%Y-%m-%d %H:%M') if quiz.last_updated else 'N/A' }}
+                        </td>
+                        <td style="padding:10px;">
+                            <button class="switch-btn" style="padding:6px 16px; font-size:0.95rem;" onclick="viewQuiz({{ quiz.quiz_id }})">View Quiz</button>
                         </td>
                     </tr>
-                {% endfor %}
+                    {% endfor %}
                 </tbody>
             </table>
-            {% else %}
-            <p style="margin-top:30px;text-align:center;">No past exams found.</p>
-            {% endif %}
-        </div>
-            <div id="questionsModal"
-                style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;"
-                onclick="if(event.target === this) closeModal();">
-                <div style="background:#fff;color:#222;padding:30px 20px;border-radius:12px;width:85%;max-height:80vh;overflow-y:auto;position:relative; margin:auto;">
-                    <button onclick="closeModal()" style="position:absolute;top:10px;right:18px;background:none;border:none;font-size:1.5em;cursor:pointer;">&times;</button>
-                    <h4 style="text-align:center;">Quiz Questions</h4>
-                    <div id="modalQuestions"></div>
+        {% else %}
+            <div class="no-results">No quizzes taken yet.</div>
+        {% endif %}
+    </div>
+    
+    <div class="container" id="plansContainer" style="display:none;">
+        <h3>Accepted Lesson Plans</h3>
+        <div id="acceptedPlansList">
+        {% if accepted_plans %}
+            {% for plan in accepted_plans %}
+                <div id="plan-card" class="plan-card"
+                    onclick="showPlanProgress({{ plan.plan_id }}, '{{ plan.topic1|trim|lower|escape }}', '{{ plan.topic2|trim|lower|escape }}')"
+                    style="cursor:pointer;">
+                    <div class="plan-title">{{ plan.plan_title }}</div>
+                    <div class="plan-teacher">By: {{ plan.teacher_name }}</div>
+                    <div class="plan-topics">
+                        <strong>Topic 1:</strong> {{ plan.topic1 }}<br>
+                        {% if plan.topic2 %}
+                            <strong>Topic 2:</strong> {{ plan.topic2 }}
+                        {% endif %}
+                    </div>
+                    <div class="plan-files">
+                        {% if plan.file1_path %}
+                            <a href="{{ url_for('static', filename=plan.file1_path) }}" target="_blank">View Topic 1 Material</a>
+                        {% endif %}
+                        {% if plan.file2_path %}
+                            <a href="{{ url_for('static', filename=plan.file2_path) }}" target="_blank">View Topic 2 Material</a>
+                        {% endif %}
+                    </div>
                 </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-results">No accepted lesson plans found.</div>
+        {% endif %}
+        </div>
+        <div id="planProgressModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:999;">
+            <div style="background:#283949; color:#fff; border-radius:16px; max-width:500px; margin:80px auto; padding:32px; position:relative;">
+                <span style="position:absolute; top:18px; right:24px; font-size:2rem; cursor:pointer;" onclick="closePlanProgress()">×</span>
+                <div id="planProgressContent"></div>
+                <div id="relatedQuizzesContainer" style="margin-top:28px;"></div>
             </div>
         </div>
     </div>
+    </div>
+    <div id="quizDetailsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:999;">
+    <div style="background:#283949; color:#fff; border-radius:16px; max-width:700px; margin:60px auto; padding:32px; position:relative; max-height:80vh; overflow-y:auto;">
+        <span style="position:absolute; top:18px; right:24px; font-size:2rem; cursor:pointer;" onclick="closeQuizDetails()">×</span>
+        <div id="quizDetailsContent"></div>
+    </div>
+</div>
+
+<!-- Add this near the end of your body -->
+<div id="aiAnalysisModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999;">
+  <div style="background:#fff; color:#222; border-radius:12px; max-width:700px; margin:60px auto; padding:32px; position:relative; max-height:80vh; overflow-y:auto;">
+    <span style="position:absolute; top:18px; right:24px; font-size:2rem; cursor:pointer;" onclick="closeAiAnalysis()">×</span>
+    <div id="aiAnalysisContent"></div>
+  </div>
+</div>
+
+<script>
+    // Define allQuizzes FIRST, before any functions that use it
+    window.allQuizzes = [
+        {% if quizzes %}
+            {% for quiz in quizzes %}
+            {
+                quiz_id: {{ quiz.quiz_id }},
+                topic: "{{ (quiz.topic or quiz.source_content or '')|trim|lower|replace('"', '\\"') }}",
+                correct_answers: {{ quiz.correct_answers or 0 }},
+                total_questions: {{ quiz.total_questions or 0 }},
+                last_updated: "{{ quiz.last_updated.strftime('%Y-%m-%d %H:%M') if quiz.last_updated else 'N/A' }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+    ];
+
+    console.log("Initialized allQuizzes:", window.allQuizzes);
+    console.log("Number of quizzes:", window.allQuizzes.length);
+
+    // Now define all the functions
+    function showQuizzes() {
+        document.getElementById('quizzesContainer').style.display = 'block';
+        document.getElementById('plansContainer').style.display = 'none';
+        document.getElementById('quizzesBtn').classList.add('active');
+        document.getElementById('plansBtn').classList.remove('active');
+    }
+    
+    function showPlans() {
+        document.getElementById('quizzesContainer').style.display = 'none';
+        document.getElementById('plansContainer').style.display = 'block';
+        document.getElementById('plansBtn').classList.add('active');
+        document.getElementById('quizzesBtn').classList.remove('active');
+    }
+
+
+    function viewQuiz(quizId) {
+        fetch(`/get_quiz_details/${quizId}`)
+            .then(res => res.json())
+            .then(questions => {
+                let html = `<h2>Quiz Details</h2>`;
+                if (questions.length === 0) {
+                    html += "<div>No questions found for this quiz.</div>";
+                } else {
+                    questions.forEach((q, idx) => {
+                        html += `<div style="margin-bottom:18px; text-align:left;">
+                            <b>Q${q.question_number}:</b> ${q.question}<br>
+                            <span style="color:#b3e0e0;">${q.passage ? 'Passage: ' + q.passage : ''}</span><br>
+                            <ul style="margin:6px 0 0 18px;">`;
+                        q.choices.forEach((choice, cidx) => {
+                            let isCorrect = (choice === q.correct_answer);
+                            let isUser = (choice === q.user_answer);
+                            let style = '';
+                            if (isCorrect && isUser) {
+                                style = 'background:#4ade80;color:#1e293b;font-weight:700;border-radius:5px;padding:2px 6px;';
+                            } else if (isCorrect) {
+                                style = 'color:#22c55e;font-weight:600;';
+                            } else if (isUser) {
+                                style = 'background:#fbbf24;color:#1e293b;font-weight:600;border-radius:5px;padding:2px 6px;';
+                            }
+                            html += `<li style="margin-bottom:2px;${style}">
+                                ${String.fromCharCode(65 + cidx)}. ${choice}
+                                ${isCorrect ? ' <span style="font-size:0.95em;">(Correct)</span>' : ''}
+                                ${isUser ? ' <span style="font-size:0.95em;">(Your answer)</span>' : ''}
+                            </li>`;
+                        });
+                        html += `</ul></div>`;
+                    });
+                }
+                document.getElementById('quizDetailsContent').innerHTML = html;
+                document.getElementById('quizDetailsModal').style.display = 'block';
+            });
+    }
+    
+    function closeQuizDetails() {
+        document.getElementById('quizDetailsModal').style.display = 'none';
+    }
+
+    function analyzePlan(planId) {
+        fetch(`/ai_analyze_plan/${planId}`)
+            .then(res => res.json())
+            .then(data => {
+                alert(data.analysis || "No analysis available.");
+            });
+    }
+
+    function showPlanProgress(planId, topic1, topic2) {
+        document.getElementById('planProgressModal').style.display = 'block';
+
+        // Fetch and display plan progress
+        fetch(`/get_plan_progress/${planId}`)
+            .then(res => res.json())
+            .then(data => {
+                let html = `<h2>Lesson Plan Progress</h2>`;
+                html += `<div style="margin-bottom:18px;"><b>Topic 1:</b> ${topic1}<br>`;
+                html += `Average Quiz Score: <span style="color:#4ade80;font-weight:600;">${data.topic1_avg !== null ? data.topic1_avg + '%' : 'No quizzes taken'}</span></div>`;
+                if (topic2) {
+                    html += `<div><b>Topic 2:</b> ${topic2}<br>`;
+                    html += `Average Quiz Score: <span style="color:#4ade80;font-weight:600;">${data.topic2_avg !== null ? data.topic2_avg + '%' : 'No quizzes taken'}</span></div>`;
+                }
+                document.getElementById('planProgressContent').innerHTML = html;
+
+                // Fetch related quizzes from backend
+                let topics = [topic1];
+                if (topic2 && topic2.trim() !== "") topics.push(topic2);
+                fetch(`/get_quizzes_by_topics?topics=${encodeURIComponent(topics.join(','))}`)
+                    .then(res => res.json())
+                    .then(related => {
+                        let relHtml = `<h3 style="margin-bottom:10px;">Related Quizzes</h3>`;
+                        if (related.length === 0) {
+                            relHtml += `<div>No quizzes taken for this topic yet.</div>`;
+                        } else {
+                            relHtml += `<table style="width:100%; border-collapse:collapse; margin-top:8px;">
+                                <thead>
+                                    <tr style="background:#334155; color:#4ade80;">
+                                        <th style="padding:7px;">Topic</th>
+                                        <th style="padding:7px;">Score (%)</th>
+                                        <th style="padding:7px;">Date Taken</th>
+                                        <th style="padding:7px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                            related.forEach(q => {
+                                let score = (q.total_questions && q.total_questions > 0)
+                                    ? ((q.correct_answers / q.total_questions) * 100).toFixed(2)
+                                    : 0;
+                                relHtml += `<tr style="background:rgba(255,255,255,0.07); color:#fff;">
+                                    <td style="padding:7px;">${q.topic}</td>
+                                    <td style="padding:7px;">${score}</td>
+                                    <td style="padding:7px;">${q.last_updated}</td>
+                                    <td style="padding:7px;">
+                                        <button class="switch-btn" style="padding:4px 12px; font-size:0.95rem;" onclick="viewQuiz(${q.quiz_id})">View</button>
+                                        <button class="switch-btn" style="padding:4px 12px; font-size:0.95rem; margin-left:6px; background:#4ade80; color:#1e293b;" onclick="analyzeQuiz(${q.quiz_id})">AI Analyze</button>
+                                    </td>
+                                </tr>`;
+                            });
+                            relHtml += `</tbody></table>`;
+                        }
+                        document.getElementById('relatedQuizzesContainer').innerHTML = relHtml;
+                    });
+            });
+    }
+    
+    function closePlanProgress() {
+        document.getElementById('planProgressModal').style.display = 'none';
+    }
+
+    function goTo(url) {
+        window.location.href = url;
+    }
+    
+    function toggleDropdown() {
+        document.getElementById("dropdownMenu").classList.toggle("show");
+    }
+
+    // Create stars animation
+    const container = document.getElementById("stars-container");
+    for (let i = 0; i < 40; i++) {
+        const star = document.createElement("div");
+        star.classList.add("star");
+        star.style.top = Math.random() * 100 + "%";
+        star.style.left = Math.random() * 100 + "%";
+        const size = Math.random() * 7 + 8;
+        star.style.width = size + "px";
+        star.style.height = size + "px";
+        star.style.animationDuration = (2 + Math.random() * 3) + "s";
+        star.style.animationDelay = Math.random() * 5 + "s";
+        container.appendChild(star);
+    }
+
+    // Event listeners
+    window.onclick = function(event) {
+        if (!event.target.matches('.burger-menu') && !event.target.matches('.bar')) {
+            var dropdowns = document.getElementsByClassName("dropdown-menu");
+            for (var i = 0; i < dropdowns.length; i++) {
+                var openDropdown = dropdowns[i];
+                if (openDropdown.classList.contains('show')) {
+                    openDropdown.classList.remove('show');
+                }
+            }
+        }
+    }
+
+    function analyzeQuiz(quizId) {
+        document.getElementById('aiAnalysisContent').innerHTML = "<b>Analyzing... Please wait.</b>";
+        document.getElementById('aiAnalysisModal').style.display = 'block';
+        fetch(`/ai_analyze_quiz/${quizId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('aiAnalysisContent').innerHTML = data.analysis;
+            })
+            .catch(() => {
+                document.getElementById('aiAnalysisContent').innerHTML = "<b>Failed to get analysis.</b>";
+            });
+    }
+
+    function closeAiAnalysis() {
+        document.getElementById('aiAnalysisModal').style.display = 'none';
+    }
+
+    window.addEventListener('DOMContentLoaded', showQuizzes);
+</script>
 </body>
 </html>
